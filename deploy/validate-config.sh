@@ -41,6 +41,32 @@ else
         echo "  ✗ OAUTH2_PROXY_COOKIE_SECURE should be true"
         ERRORS=$((ERRORS + 1))
     fi
+
+    REDIRECT_URL=$(grep "^OAUTH2_PROXY_REDIRECT_URL=" .env.sso | head -n1 | cut -d= -f2-)
+    COOKIE_DOMAIN=$(grep "^OAUTH2_PROXY_COOKIE_DOMAIN=" .env.sso | head -n1 | cut -d= -f2-)
+    CADDY_DOMAIN=$(grep "^CADDY_DOMAIN=" .env.sso | head -n1 | cut -d= -f2-)
+
+    if [ -n "$REDIRECT_URL" ] && [ -n "$COOKIE_DOMAIN" ]; then
+        REDIRECT_HOST=$(printf '%s' "$REDIRECT_URL" | sed -E 's#^https?://##; s#/oauth2/callback.*$##')
+        if [ "$REDIRECT_HOST" != "$COOKIE_DOMAIN" ]; then
+            echo "  ✗ OAUTH2_PROXY_REDIRECT_URL host ($REDIRECT_HOST) must match OAUTH2_PROXY_COOKIE_DOMAIN ($COOKIE_DOMAIN)"
+            ERRORS=$((ERRORS + 1))
+        fi
+    fi
+
+    if [ -n "$CADDY_DOMAIN" ]; then
+        if [ -n "$COOKIE_DOMAIN" ] && [ "$COOKIE_DOMAIN" != "$CADDY_DOMAIN" ]; then
+            echo "  ✗ OAUTH2_PROXY_COOKIE_DOMAIN ($COOKIE_DOMAIN) must match CADDY_DOMAIN ($CADDY_DOMAIN)"
+            ERRORS=$((ERRORS + 1))
+        fi
+        if [ -n "$REDIRECT_URL" ]; then
+            REDIRECT_HOST=$(printf '%s' "$REDIRECT_URL" | sed -E 's#^https?://##; s#/oauth2/callback.*$##')
+            if [ "$REDIRECT_HOST" != "$CADDY_DOMAIN" ]; then
+                echo "  ✗ OAUTH2_PROXY_REDIRECT_URL host ($REDIRECT_HOST) must match CADDY_DOMAIN ($CADDY_DOMAIN)"
+                ERRORS=$((ERRORS + 1))
+            fi
+        fi
+    fi
 fi
 
 # Check 2: Caddyfile exists
@@ -58,6 +84,18 @@ else
     # Check for forward_auth in Caddyfile
     if ! grep -q "forward_auth oauth2-proxy:4180" Caddyfile; then
         echo "  ✗ Caddyfile missing 'forward_auth oauth2-proxy:4180'"
+        ERRORS=$((ERRORS + 1))
+    fi
+
+    # Check that auth responses can forward the browser session cookie
+    if ! grep -q "Set-Cookie" Caddyfile; then
+        echo "  ✗ Caddyfile forward_auth block should copy 'Set-Cookie'"
+        echo "    Without it, oauth2-proxy can authenticate you once but the browser never keeps the session."
+        ERRORS=$((ERRORS + 1))
+    fi
+
+    if [ -f "caddy.oauth2.conf" ] && ! grep -q "Set-Cookie" caddy.oauth2.conf; then
+        echo "  ✗ caddy.oauth2.conf forward_auth block should copy 'Set-Cookie' too"
         ERRORS=$((ERRORS + 1))
     fi
 fi
