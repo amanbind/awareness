@@ -2,13 +2,13 @@ trigger:
   branches:
     include:
       - main
-      - master
+      - awareness
 
 pr:
   branches:
     include:
       - main
-      - master
+      - awareness
 
 jobs:
   - job: build_and_test
