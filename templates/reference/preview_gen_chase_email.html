@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Chase â Action Requested: Review the Latest Scams</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&family=Lato:wght@400;700&display=swap');
+
+    :root {
+      --black:  #0d0d0d;
+      --black2: #1a1a1a;
+      --black3: #2a2a2a;
+      --gold:   #C9A84C;
+      --gold2:  #E8C96A;
+      --gold3:  #A07C30;
+      --white:  #FFFFFF;
+      --offwhite: #F8F5EE;
+      --divider: #3a3a3a;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: #111;
+      font-family: 'Lato', Arial, sans-serif;
+      color: var(--white);
+      padding: 32px 12px;
+    }
+
+    .email-wrap {
+      max-width: 640px;
+      margin: 0 auto;
+      background: var(--black2);
+      border: 1px solid var(--gold3);
+    }
+
+    .chase-banner {
+      background: #0d0d0d;
+      padding: 0 28px;
+      border-bottom: 1px solid #2a2a2a;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      min-height: 130px;
+    }
+    .chase-banner .banner-logo { display: flex; align-items: center; }
+    .chase-banner .banner-tagline { text-align: right; line-height: 1.4; }
+    .chase-banner .banner-tagline .tag-top {
+      font-family: 'Lato', Arial, sans-serif;
+      font-size: 10px; font-weight: 700; letter-spacing: 3px;
+      text-transform: uppercase; color: var(--gold);
+    }
+    .chase-banner .banner-tagline .tag-bottom {
+      font-family: 'Lato', Arial, sans-serif;
+      font-size: 10px; font-weight: 400; letter-spacing: 3px;
+      text-transform: uppercase; color: #888;
+    }
+
+    .hero {
+      text-align: center;
+      padding: 52px 36px 40px;
+      border-bottom: 1px solid var(--divider);
+      background: var(--black2);
+    }
+    .alert-icon {
+      width: 74px; height: 74px;
+      background: var(--gold);
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      margin: 0 auto 30px;
+    }
+    .alert-icon svg { width: 38px; height: 38px; fill: var(--black); }
+    .hero h1 {
+      font-size: 30px; font-weight: 700; line-height: 1.25;
+      margin-bottom: 16px; color: var(--white);
+      font-family: 'Playfair Display', Georgia, serif;
+      letter-spacing: 0.3px;
+    }
+    .hero p { font-size: 15px; color: #bbb; margin-bottom: 28px; line-height: 1.6; }
+    .btn-link {
+      display: inline-block;
+      font-family: 'Lato', Arial, sans-serif;
+      font-size: 13px; font-weight: 700;
+      color: var(--gold);
+      text-decoration: none;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      border-bottom: 1.5px solid var(--gold3);
+      padding-bottom: 3px;
+    }
+
+    .section-label {
+      padding: 22px 30px 16px;
+      font-family: 'Lato', sans-serif;
+      font-size: 11px; font-weight: 700; letter-spacing: 3px;
+      text-transform: uppercase; color: var(--gold);
+      border-bottom: 1px solid var(--divider);
+      background: var(--black);
+    }
+
+    .story-card {
+      display: flex; align-items: flex-start; gap: 20px;
+      padding: 26px 30px;
+      border-bottom: 1px solid var(--divider);
+      background: var(--black2);
+    }
+    .story-card.reverse { flex-direction: row-reverse; }
+    .chat-icon { flex-shrink: 0; width: 56px; height: 56px; }
+    .story-content .article-label {
+      font-size: 10px; font-weight: 700; letter-spacing: 3px;
+      text-transform: uppercase; color: var(--gold);
+      margin-bottom: 10px;
+    }
+    .story-content h2 {
+      font-size: 17px; font-weight: 700; color: #bbb;
+      margin-bottom: 12px; line-height: 1.4;
+    }
+    .story-content .article-source {
+      font-size: 10px; font-weight: 700; letter-spacing: 2.5px;
+      text-transform: uppercase; color: #666; margin-bottom: 14px;
+    }
+
+    .scam-alert-section { padding: 30px; border-bottom: 1px solid var(--divider); background: var(--black); }
+    .scam-alert-badge {
+      display: inline-block;
+      background: var(--gold);
+      color: var(--black);
+      font-size: 13px; font-weight: 700; letter-spacing: 2px;
+      text-transform: uppercase;
+      padding: 7px 22px 7px 14px;
+      margin-bottom: 20px;
+    }
+    .scam-alert-section h3 {
+      font-size: 17px; font-weight: 700;
+      font-family: 'Playfair Display', serif;
+      margin-bottom: 12px; color: var(--white);
+    }
+    .scam-alert-section > p { font-size: 14px; color: #aaa; margin-bottom: 14px; line-height: 1.6; }
+    .scam-alert-section ul { margin: 0 0 18px 0; list-style: none; }
+    .scam-alert-section ul li {
+      font-size: 14px; color: #ccc; margin-bottom: 8px; line-height: 1.5;
+      padding-left: 20px; position: relative;
+    }
+    .scam-alert-section ul li::before {
+      content: 'âº'; position: absolute; left: 0;
+      color: var(--gold); font-size: 18px; line-height: 1.1; font-weight: 700;
+    }
+
+    .help-section { padding: 40px 36px; text-align: center; background: var(--black2); }
+    .help-section h2 {
+      font-size: 26px; font-weight: 700;
+      font-family: 'Playfair Display', Georgia, serif;
+      margin-bottom: 14px; color: var(--gold);
+    }
+    .help-section p {
+      font-size: 14px; color: #aaa; margin-bottom: 24px;
+      line-height: 1.65; max-width: 420px;
+      margin-left: auto; margin-right: auto;
+    }
+
+    .gold-rule { border: none; border-top: 1px solid var(--gold3); margin: 0; }
+  </style>
+</head>
+<body>
+
+<div class="email-wrap">
+
+  <div class="chase-banner">
+    <div class="banner-logo">
+      <div style="color:#C9A84C; font-family:'Playfair Display', Georgia, serif; font-size:28px; font-weight:700; letter-spacing:1.5px;">AWARENESS</div>
+    </div>
+    <div class="banner-tagline">
+      <div class="tag-top">Security Awareness</div>
+      <div class="tag-bottom">Monthly Bulletin</div>
+    </div>
+  </div>
+
+  <div class="hero">
+    <div class="alert-icon">
+      <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/>
+      </svg>
+    </div>
+    <h1>Action requested: Review the<br>latest scams</h1>
+    <p>You won't believe how convincing scammers can sound.</p>
+    <a href="#" class="btn-link">Review scams Â»</a>
+  </div>
+
+  <div class="section-label">How it can happen</div>
+
+  <div class="story-card">
+    <div class="chat-icon">
+      <svg viewBox="0 0 56 56" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <rect x="2" y="4" width="34" height="26" rx="6" stroke="#C9A84C" stroke-width="2.5" fill="none"/>
+        <rect x="16" y="22" width="28" height="22" rx="6" stroke="#C9A84C" stroke-width="2.5" fill="none"/>
+      </svg>
+    </div>
+    <div class="story-content">
+      <div class="article-label">Article 1</div>
+      <h2>{{ARTICLE1_TITLE}}</h2>
+      <div class="article-source">Source: {{ARTICLE1_SOURCE}}</div>
+      <a href="{{ARTICLE1_LINK}}" class="btn-link">Read article â</a>
+    </div>
+  </div>
+
+  <div class="story-card reverse">
+    <div class="chat-icon">
+      <svg viewBox="0 0 56 56" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <rect x="2" y="4" width="34" height="26" rx="6" stroke="#C9A84C" stroke-width="2.5" fill="none"/>
+        <rect x="16" y="22" width="28" height="22" rx="6" stroke="#C9A84C" stroke-width="2.5" fill="none"/>
+      </svg>
+    </div>
+    <div class="story-content">
+      <div class="article-label">Article 2</div>
+      <h2>{{ARTICLE2_TITLE}}</h2>
+      <div class="article-source">Source: {{ARTICLE2_SOURCE}}</div>
+      <a href="{{ARTICLE2_LINK}}" class="btn-link">Read article â</a>
+    </div>
+  </div>
+
+  <div class="story-card">
+    <div class="chat-icon">
+      <svg viewBox="0 0 56 56" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <rect x="2" y="4" width="34" height="26" rx="6" stroke="#C9A84C" stroke-width="2.5" fill="none"/>
+        <rect x="16" y="22" width="28" height="22" rx="6" stroke="#C9A84C" stroke-width="2.5" fill="none"/>
+      </svg>
+    </div>
+    <div class="story-content">
+      <div class="article-label">Article 3</div>
+      <h2>{{ARTICLE3_TITLE}}</h2>
+      <div class="article-source">Source: {{ARTICLE3_SOURCE}}</div>
+      <a href="{{ARTICLE3_LINK}}" class="btn-link">Read article â</a>
+    </div>
+  </div>
+
+  <hr class="gold-rule">
+
+  <div class="scam-alert-section">
+    <div class="scam-alert-badge">Scam Alert</div>
+    <h3>Watch out for scammers impersonating Chase</h3>
+    <p>They'll pretend your money is at risk to get you to act fast, saying things like:</p>
+    <ul>
+      <li>"There's fraud on your account."</li>
+      <li>"You'll lose the rest of your money if you don't act now."</li>
+      <li>"Hackers might clean out your account."</li>
+    </ul>
+    <a href="#" class="btn-link">Review scam Â»</a>
+  </div>
+
+  <hr class="gold-rule">
+
+  <div class="help-section">
+    <h2>We're here to help</h2>
+    <p>If you suspect fraud on your account, promptly call the number on the back of your card or account statement.</p>
+    <a href="#" class="btn-link">Review scams Â»</a>
+  </div>
+
+  <!-- Bankpage1_dynamic-style footer (appended at build time by buildGenChaseEmail) -->
+  <!-- Includes: gold hairline / Key takeaways pill / Pause → Don't engage → Report headline /
+       Report-to-SOC button / Security Awareness Portal block / QR slot / Bottom gold hairline -->
+
+</div>
+</body>
+</html>

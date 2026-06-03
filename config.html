@@ -1,0 +1,743 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1.0">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https:; connect-src 'self' http://127.0.0.1:4175 https://api.anthropic.com https://api.openai.com https://api.allorigins.win https://corsproxy.io https://api.codetabs.com https://api.rss2json.com https:; frame-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'">
+  <meta name="referrer" content="strict-origin-when-cross-origin">
+  <title>Configuration - Awareness Newsletter</title>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&family=DM+Serif+Display&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #0a0a0a;
+      --panel: #121212;
+      --panel-2: #171717;
+      --border: rgba(255,255,255,.13);
+      --text: #f0f0f0;
+      --muted: #afafaf;
+      --gold: #d4a420;
+      --gold-soft: rgba(212,164,32,.12);
+      --shadow: 0 14px 30px rgba(0,0,0,.32);
+      --radius: 12px;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background:
+        radial-gradient(circle at 8% 0%, rgba(212,164,32,.12), transparent 28%),
+        radial-gradient(circle at 100% 100%, rgba(212,164,32,.06), transparent 33%),
+        var(--bg);
+      color: var(--text);
+      font-family: 'DM Sans', sans-serif;
+    }
+    .wrap { max-width: 1220px; margin: 0 auto; padding: 1.2rem 1rem 1.6rem; }
+    .hero {
+      border: 1px solid var(--border);
+      border-radius: calc(var(--radius) + 2px);
+      background: linear-gradient(165deg, rgba(255,255,255,.04), rgba(255,255,255,.01));
+      box-shadow: var(--shadow);
+      padding: 1rem;
+      margin-bottom: .95rem;
+    }
+    .hero-top { display: flex; justify-content: space-between; align-items: center; gap: .7rem; flex-wrap: wrap; }
+    .hero h1 {
+      font-family: 'DM Serif Display', serif;
+      margin: 0;
+      font-size: clamp(1.45rem, 2.8vw, 2rem);
+      letter-spacing: .01em;
+    }
+    .subtitle { color: var(--muted); font-size: .86rem; margin-top: .25rem; }
+    .save-status {
+      font-size: .76rem;
+      color: #d8d8d8;
+      border: 1px solid rgba(255,255,255,.14);
+      background: rgba(255,255,255,.03);
+      padding: .36rem .65rem;
+      border-radius: 999px;
+      white-space: nowrap;
+      transition: border-color .22s ease, box-shadow .22s ease, transform .22s ease;
+    }
+    .save-status.saved-pulse {
+      border-color: rgba(212,164,32,.75);
+      box-shadow: 0 0 0 5px rgba(212,164,32,.12), 0 0 16px rgba(212,164,32,.22);
+      transform: translateY(-1px);
+    }
+    .nav {
+      display: flex;
+      gap: .5rem;
+      flex-wrap: wrap;
+      margin-top: .85rem;
+      padding-top: .82rem;
+      border-top: 1px solid rgba(255,255,255,.1);
+    }
+    .btn {
+      border: 1px solid rgba(255,255,255,.2);
+      background: rgba(255,255,255,.02);
+      color: #ddd;
+      padding: .5rem .85rem;
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: 500;
+      transition: transform .18s ease, border-color .18s ease, background-color .18s ease, box-shadow .18s ease;
+    }
+    .btn:hover {
+      border-color: rgba(255,255,255,.35);
+      transform: translateY(-1px);
+      box-shadow: 0 8px 18px rgba(0,0,0,.28);
+      background: rgba(255,255,255,.045);
+    }
+    .btn.primary {
+      border-color: rgba(212,164,32,.52);
+      color: #ffe29b;
+      background: linear-gradient(135deg, rgba(212,164,32,.18), rgba(212,164,32,.05));
+    }
+    .btn.primary:hover { border-color: rgba(212,164,32,.8); }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(320px, 1fr));
+      gap: .82rem;
+      align-items: stretch;
+    }
+    .card {
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      background: linear-gradient(180deg, var(--panel-2), var(--panel));
+      padding: .9rem .95rem;
+      box-shadow: var(--shadow);
+      position: relative;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      transition: transform .22s ease, border-color .22s ease, box-shadow .22s ease;
+    }
+    .card-standard {
+      min-height: 640px;
+    }
+    .page-wide {
+      grid-column: 1 / -1;
+    }
+    .card::before {
+      content: '';
+      position: absolute;
+      inset: -1px;
+      background: radial-gradient(circle at var(--mx, 50%) var(--my, 50%), rgba(212,164,32,.16), transparent 42%);
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity .2s ease;
+    }
+    .card:hover {
+      transform: translateY(-2px);
+      border-color: rgba(212,164,32,.28);
+      box-shadow: 0 18px 34px rgba(0,0,0,.38);
+    }
+    .card:hover::before { opacity: 1; }
+    @media (prefers-reduced-motion: reduce) {
+      .card, .btn, .save-status { transition: none; }
+      .card:hover { transform: none; }
+    }
+    .title {
+      margin: .1rem 0 .16rem;
+      color: var(--gold);
+      font-size: .96rem;
+      font-weight: 700;
+      letter-spacing: .02em;
+      display: flex;
+      align-items: center;
+      gap: .45rem;
+    }
+    .title-icon {
+      width: 24px;
+      height: 24px;
+      border-radius: 7px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: .82rem;
+      background: rgba(212,164,32,.16);
+      border: 1px solid rgba(212,164,32,.34);
+      color: #f2d58a;
+      box-shadow: inset 0 0 0 1px rgba(255,255,255,.03);
+    }
+    .title-sub { margin: 0 0 .72rem; color: var(--muted); font-size: .78rem; }
+    .row { display: grid; grid-template-columns: 1fr 1fr; gap: .55rem; }
+    .field { margin-bottom: .55rem; }
+    label {
+      display: block;
+      font-size: .71rem;
+      color: #bdbdbd;
+      margin-bottom: .24rem;
+      text-transform: uppercase;
+      letter-spacing: .05em;
+    }
+    input, select {
+      width: 100%;
+      background: #191919;
+      border: 1px solid rgba(255,255,255,.16);
+      color: #fff;
+      padding: .52rem .6rem;
+      border-radius: 8px;
+      transition: .18s ease;
+    }
+    input:focus, select:focus {
+      outline: none;
+      border-color: rgba(212,164,32,.75);
+      box-shadow: 0 0 0 3px var(--gold-soft);
+    }
+    .toggle {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: .8rem;
+      margin-bottom: .38rem;
+      padding: .42rem .52rem;
+      border: 1px solid rgba(255,255,255,.1);
+      border-radius: 8px;
+      background: rgba(255,255,255,.02);
+    }
+    .toggle span { font-size: .84rem; color: #e7e7e7; }
+    input[type="checkbox"] { accent-color: var(--gold); width: 16px; height: 16px; }
+    .save-actions {
+      display: flex;
+      gap: .5rem;
+      flex-wrap: wrap;
+      margin-top: auto;
+      padding-top: .65rem;
+      padding-bottom: .05rem;
+      border-top: 1px solid rgba(255,255,255,.1);
+    }
+    .save-actions.compact {
+      margin-top: .35rem;
+      padding-top: .6rem;
+      border-top: 1px solid rgba(255,255,255,.1);
+    }
+    #feed-sources-dashboard { margin-top: .25rem; }
+    .feed-source-mgr {
+      border: 1px solid rgba(255,255,255,.14);
+      border-radius: 10px;
+      padding: .72rem;
+      background: linear-gradient(180deg, rgba(255,255,255,.03), rgba(255,255,255,.01));
+      margin-bottom: .95rem;
+    }
+    .feed-source-row {
+      display: grid;
+      grid-template-columns: minmax(140px, 1fr) minmax(220px, 2fr) auto;
+      gap: .45rem;
+      align-items: center;
+    }
+    .feed-source-input {
+      width: 100%;
+      background: #1a1a1a;
+      border: 1px solid rgba(255,255,255,.16);
+      color: #fff;
+      border-radius: 8px;
+      padding: .5rem .56rem;
+    }
+    .feed-source-list { margin-top: .65rem; display: grid; gap: .45rem; }
+    .feed-source-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: .55rem;
+      border: 1px solid rgba(255,255,255,.12);
+      border-radius: 10px;
+      padding: .52rem .62rem;
+      background: rgba(255,255,255,.02);
+    }
+    .feed-source-title { font-size: .79rem; font-weight: 700; color: #f0f0f0; }
+    .feed-source-link {
+      font-size: .69rem;
+      color: #b8b8b8;
+      margin-top: .12rem;
+      word-break: break-all;
+    }
+    .feed-source-remove-btn {
+      color: #ffb1b1;
+      border-color: rgba(255,120,120,.34);
+      font-size: .72rem;
+      padding: .36rem .55rem;
+    }
+    .feed-source-empty {
+      margin-top: .6rem;
+      border: 1px dashed rgba(255,255,255,.2);
+      border-radius: 8px;
+      padding: .58rem;
+      color: #bbbbbb;
+      font-size: .76rem;
+      text-align: center;
+    }
+    .feed-tier-label {
+      display: flex;
+      align-items: center;
+      gap: .55rem;
+      color: #e8c674;
+      font-weight: 700;
+      letter-spacing: .04em;
+      text-transform: uppercase;
+      font-size: .66rem;
+      margin: .8rem 0 .45rem;
+    }
+    .feed-tier-label::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: linear-gradient(90deg, rgba(212,164,32,.35), rgba(255,255,255,.06));
+    }
+    .feed-src-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+      gap: .52rem;
+      margin-bottom: .38rem;
+    }
+    .feed-src-card {
+      border: 1px solid rgba(255,255,255,.14);
+      border-radius: 11px;
+      background: linear-gradient(165deg, rgba(255,255,255,.04), rgba(255,255,255,.015));
+      padding: .62rem .65rem;
+      display: flex;
+      flex-direction: column;
+      gap: .45rem;
+      min-height: 120px;
+      transition: transform .2s ease, border-color .2s ease, box-shadow .2s ease;
+    }
+    .feed-src-card:hover {
+      transform: translateY(-2px);
+      border-color: rgba(212,164,32,.34);
+      box-shadow: 0 10px 24px rgba(0,0,0,.28);
+    }
+    .feed-src-icon { font-size: 1.05rem; line-height: 1; }
+    .feed-src-info { min-width: 0; }
+    .feed-src-name {
+      font-size: .8rem;
+      color: #f4f4f4;
+      font-weight: 700;
+      line-height: 1.3;
+    }
+    .feed-src-site {
+      margin-top: .13rem;
+      font-size: .69rem;
+      color: #b5b5b5;
+      line-height: 1.35;
+      word-break: break-word;
+    }
+    .feed-src-status {
+      margin-top: auto;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: .4rem;
+      flex-wrap: wrap;
+    }
+    .feed-src-badge {
+      font-size: .62rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .04em;
+      border-radius: 999px;
+      padding: .2rem .5rem;
+      border: 1px solid rgba(255,255,255,.2);
+      background: rgba(255,255,255,.04);
+    }
+    .feed-src-badge.ok {
+      border-color: rgba(64,185,120,.35);
+      color: #75d5a2;
+      background: rgba(64,185,120,.12);
+    }
+    .feed-src-badge.fail {
+      border-color: rgba(237,108,108,.35);
+      color: #ffaaaa;
+      background: rgba(237,108,108,.12);
+    }
+    .feed-src-badge.waiting {
+      border-color: rgba(255,255,255,.2);
+      color: #d0d0d0;
+      background: rgba(255,255,255,.05);
+    }
+    .feed-src-count {
+      font-size: .67rem;
+      color: #c8c8c8;
+      background: rgba(255,255,255,.04);
+      border: 1px solid rgba(255,255,255,.12);
+      padding: .14rem .4rem;
+      border-radius: 999px;
+    }
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      gap: .35rem;
+      font-size: .66rem;
+      letter-spacing: .04em;
+      text-transform: uppercase;
+      border-radius: 999px;
+      padding: .2rem .55rem;
+      border: 1px solid rgba(255,255,255,.2);
+      color: #d9d9d9;
+      background: rgba(255,255,255,.04);
+    }
+    .pill.good {
+      border-color: rgba(64,185,120,.35);
+      color: #75d5a2;
+      background: rgba(64,185,120,.12);
+    }
+    .pill.warn {
+      border-color: rgba(234,187,93,.35);
+      color: #f2cb84;
+      background: rgba(234,187,93,.12);
+    }
+    .pill.danger {
+      border-color: rgba(237,108,108,.35);
+      color: #ffaaaa;
+      background: rgba(237,108,108,.12);
+    }
+    .tiny {
+      font-size: .72rem;
+      color: #bcbcbc;
+      margin: .35rem 0 .7rem;
+    }
+    .sticky-save {
+      position: fixed;
+      right: 14px;
+      bottom: 14px;
+      z-index: 60;
+      display: flex;
+      align-items: center;
+      gap: .45rem;
+      padding: .5rem .55rem;
+      border-radius: 10px;
+      border: 1px solid rgba(255,255,255,.16);
+      background: rgba(10,10,10,.84);
+      box-shadow: 0 14px 28px rgba(0,0,0,.36);
+      backdrop-filter: blur(8px);
+      opacity: 0;
+      transform: translateY(8px);
+      pointer-events: none;
+      transition: opacity .2s ease, transform .2s ease;
+    }
+    .sticky-save.visible {
+      opacity: 1;
+      transform: translateY(0);
+      pointer-events: auto;
+    }
+    .sticky-save .hint {
+      font-size: .72rem;
+      color: #c9c9c9;
+      padding: 0 .25rem;
+    }
+    @media (max-width: 980px) {
+      .grid { grid-template-columns: 1fr; }
+      .row { grid-template-columns: 1fr; }
+      .card-standard { min-height: 0; }
+      .page-wide { grid-column: auto; }
+      .feed-source-row { grid-template-columns: 1fr; }
+      .feed-source-row .btn { width: 100%; }
+      .sticky-save { left: 10px; right: 10px; justify-content: space-between; }
+      .sticky-save .btn { flex: 1; }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap" id="config-page-root">
+    <section class="hero">
+      <div class="hero-top">
+        <div>
+          <h1>Configuration Hub</h1>
+          <div class="subtitle">Centralized settings for AI, delivery, feed sources, and newsletter defaults.</div>
+        </div>
+        <div id="config-save-status" class="save-status">Last saved: not yet</div>
+      </div>
+      <div class="nav">
+        <button class="btn" onclick="App.UI.goToHomePage()">Home</button>
+        <button class="btn" onclick="App.RouterNav.goto('editor.html',{ source:'config' })">Editor</button>
+        <button class="btn" onclick="App.RouterNav.goto('send.html',{ source:'config' })">Send</button>
+        <button class="btn" onclick="window.location.href='keywords.html'">Keywords</button>
+        <button class="btn" onclick="window.location.href='projects.html'">Projects</button>
+        <button class="btn primary" onclick="saveAllConfig()">Save All Settings</button>
+      </div>
+    </section>
+
+    <div class="grid">
+      <div class="card card-standard">
+        <div class="title"><span class="title-icon">🏢</span>Newsletter defaults</div>
+        <p class="title-sub">SOC contact, cadence, and issue metadata used across the compose workflow, preview, and send.</p>
+        <div class="row">
+          <div class="field"><label>SOC Email</label><input id="cfg-soc" value="SOC-support@abc.com"></div>
+        </div>
+        <div class="row">
+          <div class="field"><label>Organization name</label><input id="cfg-org" value="ABC Corp"></div>
+          <div class="field"><label>Portal URL</label><input id="cfg-portal" type="url" value="https://security.abc.com/awareness"></div>
+        </div>
+        <div class="field"><label>Portal display name</label><input id="cfg-pname" value="ABC Security Awareness Portal"></div>
+        <div class="row">
+          <div class="field"><label>Frequency</label><select id="cfg-freq"><option>Weekly</option><option>Bi-Weekly</option><option>Monthly</option><option>Quarterly</option></select></div>
+          <div class="field"><label>Max Incidents</label><select id="cfg-max"><option value="1">1</option><option value="2" selected>2</option><option value="3">3</option><option value="4">4</option><option value="5">5</option></select></div>
+        </div>
+        <div class="field"><label>Newsletter Title</label><input id="meta-title" placeholder="Weekly security digest"></div>
+        <div class="row">
+          <div class="field"><label>Issue Date</label><input type="date" id="meta-issue-date"></div>
+          <div class="field"><label>Status</label><select id="meta-status"><option value="draft">draft</option><option value="review">review</option><option value="approved">approved</option><option value="sent">sent</option><option value="archived">archived</option></select></div>
+        </div>
+      </div>
+
+      <div class="card card-standard">
+        <div class="title"><span class="title-icon">✨</span>Newsletter + AI Settings</div>
+        <p class="title-sub">Control generation options and AI translation in one place.</p>
+        <div class="toggle"><span>Threat Alert Block</span><label><input type="checkbox" id="feat-poster" checked></label></div>
+        <div class="toggle"><span>Source Links</span><label><input type="checkbox" id="feat-links" checked></label></div>
+        <div class="toggle"><span>QR Code</span><label><input type="checkbox" id="feat-qr" checked></label></div>
+        <div class="toggle"><span>SVG Illustrations</span><label><input type="checkbox" id="feat-illus" checked></label></div>
+        <div class="toggle"><span>Enable AI</span><label><input type="checkbox" id="feat-ai" checked></label></div>
+        <div class="field"><label>AI Provider</label><select id="ai-provider"><option value="claude">Claude (Anthropic)</option><option value="openai">GPT-4o Mini (OpenAI)</option></select></div>
+        <div class="field"><label>AI API Key</label><input type="password" id="ai-key" placeholder="sk-..." autocomplete="new-password" spellcheck="false"></div>
+        <div class="save-actions compact">
+          <button class="btn" onclick="App.UI.saveAISettings()">Save AI Settings</button>
+          <button class="btn primary" onclick="saveAllConfig()">Save All</button>
+        </div>
+      </div>
+
+      <div class="card page-wide">
+        <div class="title"><span class="title-icon">📬</span>Email delivery</div>
+        <p class="title-sub">The app posts to a relay URL you control. For Outlook, use Microsoft Graph (recommended) and run the local relay from this repo (<code>npm run relay:graph</code>), or point to your own HTTPS endpoint that calls Graph.</p>
+        <div class="field"><label>Relay endpoint URL</label><input id="smtp-relay-url" placeholder="http://127.0.0.1:8787/"></div>
+        <div class="field"><label>Delivery method</label>
+          <select id="delivery-method">
+            <option value="graph" selected>Microsoft Graph (Outlook)</option>
+            <option value="smtp">SMTP relay (legacy)</option>
+          </select>
+        </div>
+        <div id="delivery-graph-panel">
+          <p class="title-sub" style="margin-top:0.5rem">Azure app registration: grant application permission <strong>Mail.Send</strong> and admin consent. The sender mailbox must exist in your tenant.</p>
+          <div class="row">
+            <div class="field"><label>Directory (tenant) ID</label><input id="graph-tenant-id" placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx" autocomplete="off"></div>
+            <div class="field"><label>Application (client) ID</label><input id="graph-client-id" placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx" autocomplete="off"></div>
+          </div>
+          <div class="field"><label>Client secret value</label><input type="password" id="graph-client-secret" placeholder="from Certificates &amp; secrets" autocomplete="off"></div>
+        </div>
+        <div id="delivery-smtp-panel" style="display:none">
+          <div class="row">
+            <div class="field"><label>SMTP host</label><input id="smtp-host" placeholder="smtp.office365.com"></div>
+            <div class="field"><label>Port</label><input id="smtp-port" value="587"></div>
+          </div>
+          <div class="row">
+            <div class="field"><label>Username</label><input id="smtp-username"></div>
+            <div class="field"><label>Password</label><input type="password" id="smtp-password" autocomplete="new-password" spellcheck="false"></div>
+          </div>
+          <div class="toggle"><span>Use TLS/STARTTLS</span><label><input type="checkbox" id="smtp-secure" checked></label></div>
+        </div>
+        <div class="row">
+          <div class="field"><label>From name</label><input id="smtp-from-name" value="Security Team"></div>
+          <div class="field"><label>From email / sender mailbox</label><input id="smtp-from-address" placeholder="security@yourtenant.onmicrosoft.com"></div>
+        </div>
+        <div class="row">
+          <div class="field"><label>Test recipient</label><input id="smtp-test-to" placeholder="you@example.com"></div>
+          <div class="field"><label>Recipients (comma-separated)</label><input id="smtp-send-to" placeholder="team@example.com, staff@example.com"></div>
+        </div>
+        <div class="save-actions compact">
+          <button class="btn" onclick="App.UI.saveSMTPConfig()">Save delivery settings</button>
+          <button class="btn primary" onclick="saveAllConfig()">Save All</button>
+        </div>
+      </div>
+
+      <div class="card page-wide">
+        <div class="title"><span class="title-icon">🧪</span>AI Experiment Controls (FR-08 / FR-09)</div>
+        <p class="title-sub">Controlled R&D with opt-in rollout, evidence scoring, go/no-go decisioning, and rollback readiness.</p>
+        <div class="row">
+          <div>
+            <div class="toggle"><span>Enable AI Image Pilot</span><label><input type="checkbox" id="ai-exp-enabled"></label></div>
+            <div class="toggle"><span>Require Explicit User Opt-In</span><label><input type="checkbox" id="ai-exp-optin" checked></label></div>
+            <div class="toggle"><span>Show AI-Generated Label in Output</span><label><input type="checkbox" id="ai-exp-label" checked></label></div>
+            <div class="toggle"><span>Rollback Mode (stable flow only)</span><label><input type="checkbox" id="ai-exp-rollback"></label></div>
+            <div class="tiny">Rollback mode instantly disables experimental AI visuals without affecting baseline newsletter flow.</div>
+          </div>
+          <div>
+            <div class="row">
+              <div class="field"><label>Experiment Rounds Completed</label><input id="ai-exp-rounds" type="number" min="0" value="0"></div>
+              <div class="field"><label>Outputs Evaluated</label><input id="ai-exp-outputs" type="number" min="0" value="0"></div>
+            </div>
+            <div class="row">
+              <div class="field"><label>Brand Safety Pass Rate (%)</label><input id="ai-exp-brand-pass" type="number" min="0" max="100" value="0"></div>
+              <div class="field"><label>Relevance Pass Rate (%)</label><input id="ai-exp-relevance-pass" type="number" min="0" max="100" value="0"></div>
+            </div>
+            <div class="row">
+              <div class="field"><label>Mean Time To Detect (hours)</label><input id="ai-exp-mttd" type="number" min="0" value="0"></div>
+              <div class="field"><label>Mean Time To Mitigate (hours)</label><input id="ai-exp-mttm" type="number" min="0" value="0"></div>
+            </div>
+            <div class="row">
+              <div class="field"><label>Taxonomy-Mapped Incidents (%)</label><input id="ai-exp-taxonomy-coverage" type="number" min="0" max="100" value="0"></div>
+              <div class="field"><label>Go / No-Go Decision</label><select id="ai-exp-decision"><option value="pending">Pending</option><option value="proceed">Proceed</option><option value="pause">Pause</option><option value="sunset">Sunset</option></select></div>
+            </div>
+            <div class="field"><label>Decision Rationale (evidence-backed)</label><input id="ai-exp-rationale" placeholder="Summarize evidence, risks, and recommendation"></div>
+          </div>
+        </div>
+        <div class="row">
+          <div>
+            <div class="field"><label>Incident Taxonomy Counters</label></div>
+            <div class="row">
+              <div class="field"><label>Hallucination</label><input id="ai-exp-tax-hallucination" type="number" min="0" value="0"></div>
+              <div class="field"><label>Policy</label><input id="ai-exp-tax-policy" type="number" min="0" value="0"></div>
+            </div>
+            <div class="row">
+              <div class="field"><label>Timeout</label><input id="ai-exp-tax-timeout" type="number" min="0" value="0"></div>
+              <div class="field"><label>Formatting</label><input id="ai-exp-tax-formatting" type="number" min="0" value="0"></div>
+            </div>
+          </div>
+          <div>
+            <div class="field"><label>Gate D Readiness</label></div>
+            <div id="ai-exp-readiness-pill" class="pill">Pending</div>
+            <div class="tiny" id="ai-exp-readiness-note">Fill experiment evidence metrics to compute readiness.</div>
+          </div>
+        </div>
+        <div class="save-actions compact">
+          <button class="btn" onclick="App.UI.saveAIExperimentControl()">Save Experiment Controls</button>
+          <button class="btn" onclick="App.UI.exportAIExperimentEvidence()">Export Evidence Log</button>
+          <button class="btn" onclick="App.UI.triggerAIRollback()">Trigger Rollback Now</button>
+          <button class="btn primary" onclick="saveAllConfig()">Save All</button>
+        </div>
+      </div>
+
+      <div class="card page-wide">
+        <div class="title"><span class="title-icon">📡</span>Feed Source Management</div>
+        <p class="title-sub">Add or remove custom sources while monitoring feed health.</p>
+        <div id="feed-sources-dashboard"></div>
+      </div>
+    </div>
+
+    <div id="sticky-save-bar" class="sticky-save" aria-hidden="true">
+      <span class="hint">Changes autosave</span>
+      <button class="btn primary" onclick="saveAllConfig()">Save All</button>
+    </div>
+
+    <div id="sb-feeds-list" hidden></div>
+    <div id="saved-drafts-list" hidden></div>
+    <div id="delivery-log-list" hidden></div>
+    <div id="db-stats" hidden></div>
+    <div id="feed-status-area" hidden></div>
+    <div id="articles-area" hidden></div>
+    <div id="status-log" hidden></div>
+    <div id="max-lbl" hidden>2</div>
+    <div id="type-chart" hidden></div>
+    <select id="preview-lang" hidden></select>
+    <select id="wf-next-state" hidden></select>
+    <span id="wf-state-chip" hidden>Draft</span>
+    <div id="preview-panel" hidden></div>
+    <div id="tpl-preview-modal" hidden></div>
+    <div id="nl-out" hidden></div>
+    <div id="tpl-preview-out" hidden></div>
+    <div id="translate-modal" hidden></div>
+    <div id="translate-step-label" hidden></div>
+    <div id="translate-step-count" hidden></div>
+    <div id="translate-bar-fill" hidden></div>
+  </div>
+
+  <script src="js/utils.js"></script>
+  <script src="js/db.js"></script>
+  <script src="js/router_nav.js"></script>
+  <script src="js/ux_contract.js"></script>
+  <script src="js/feed_scoring.js"></script>
+  <script src="js/keyword_store.js"></script>
+  <script src="js/project_store.js"></script>
+  <script src="js/responsive_layout.js"></script>
+  <script src="js/rss_fetcher.js"></script>
+  <script src="js/ai/prompts.js"></script>
+  <script src="js/ai/local_fallbacks.js"></script>
+  <script src="js/ai/logger.js"></script>
+  <script src="js/ai_summarizer.js"></script>
+  <script src="js/ai/prompt_builders.js"></script>
+  <script src="js/ai/bank_page_ensemble.js"></script>
+  <script src="js/graphics_engine.js"></script>
+  <script src="assets/template_assets.js"></script>
+  <script src="js/newsletter_builder.js"></script>
+  <script src="js/newsletter/bank_page.js"></script>
+  <script src="js/newsletter/core_templates.js"></script>
+  <script src="js/translation_metrics.js"></script>
+  <script src="js/delivery_helpers.js"></script>
+  <script src="js/ui_controller.js"></script>
+  <script src="js/ui/translation.js"></script>
+  <script src="js/ui/ai_experiment.js"></script>
+  <script src="js/ui/generate_pipeline.js"></script>
+  <script src="js/ui/sidebar_manager.js"></script>
+  <script src="js/editor/iframe_script.js"></script>
+  <script src="js/editor.js"></script>
+  <script>
+    const CENTRAL_CONFIG_STORAGE_KEY = 'awareness_central_config_v1';
+    let autosaveTimer = null;
+
+    function updateSaveStatus(isoString) {
+      const el = document.getElementById('config-save-status');
+      if (!el) return;
+      if (!isoString) {
+        el.textContent = 'Last saved: not yet';
+        return;
+      }
+      const dt = new Date(isoString);
+      if (Number.isNaN(dt.getTime())) {
+        el.textContent = 'Last saved: just now';
+        triggerSavePulse(el);
+        return;
+      }
+      el.textContent = `Last saved: ${dt.toLocaleString()}`;
+      triggerSavePulse(el);
+    }
+
+    function triggerSavePulse(el) {
+      if (!el) return;
+      el.classList.remove('saved-pulse');
+      void el.offsetWidth;
+      el.classList.add('saved-pulse');
+      setTimeout(() => el.classList.remove('saved-pulse'), 520);
+    }
+
+    async function saveAllConfig(silent = false) {
+      App.UI.saveCentralConfig({ silent });
+      App.UI.saveAISettings({ silent });
+      App.UI.saveAIExperimentControl({ silent });
+      await App.UI.saveSMTPConfig({ silent });
+      if (silent) {
+        const saved = JSON.parse(localStorage.getItem(CENTRAL_CONFIG_STORAGE_KEY) || 'null');
+        updateSaveStatus(saved?.savedAt || new Date().toISOString());
+      }
+    }
+
+    function queueAutosave() {
+      clearTimeout(autosaveTimer);
+      autosaveTimer = setTimeout(() => {
+        saveAllConfig(true).catch(() => {});
+      }, 550);
+    }
+
+    function initAutosave() {
+      const root = document.getElementById('config-page-root');
+      const sticky = document.getElementById('sticky-save-bar');
+      if (!root) return;
+      root.addEventListener('input', queueAutosave);
+      root.addEventListener('change', queueAutosave);
+      root.querySelectorAll('.card').forEach((card) => {
+        card.addEventListener('pointermove', (event) => {
+          const rect = card.getBoundingClientRect();
+          const x = ((event.clientX - rect.left) / rect.width) * 100;
+          const y = ((event.clientY - rect.top) / rect.height) * 100;
+          card.style.setProperty('--mx', `${Math.max(0, Math.min(100, x))}%`);
+          card.style.setProperty('--my', `${Math.max(0, Math.min(100, y))}%`);
+        });
+      });
+      if (sticky) {
+        const syncSticky = () => {
+          const show = window.scrollY > 260;
+          sticky.classList.toggle('visible', show);
+          sticky.setAttribute('aria-hidden', show ? 'false' : 'true');
+        };
+        window.addEventListener('scroll', syncSticky, { passive: true });
+        syncSticky();
+      }
+      document.addEventListener('awareness:config-saved', (event) => {
+        updateSaveStatus(event?.detail?.savedAt || '');
+      });
+      const stored = JSON.parse(localStorage.getItem(CENTRAL_CONFIG_STORAGE_KEY) || 'null');
+      updateSaveStatus(stored?.savedAt || '');
+    }
+
+    App.UXContract?.init({ pageId: 'config', flowStepId: 'curate' });
+    if (App.ResponsiveLayout?.init) App.ResponsiveLayout.init();
+    App.UI.init();
+    initAutosave();
+  </script>
+</body>
+</html>

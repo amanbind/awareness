@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1.0">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https:; connect-src 'self' http://127.0.0.1:4175 https://api.anthropic.com https://api.openai.com https://api.allorigins.win https://corsproxy.io https://api.codetabs.com https://api.rss2json.com https:; frame-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'">
+  <meta name="referrer" content="strict-origin-when-cross-origin">
+  <title>Curation lab - Awareness Newsletter</title>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&family=DM+Serif+Display&display=swap" rel="stylesheet">
+  <style>
+    body { margin: 0; background: #0a0a0a; color: #fff; font-family: 'DM Sans', sans-serif; }
+    .wrap { max-width: 1180px; margin: 0 auto; padding: 1rem 1rem 2.5rem; }
+    h1 { font-family: 'DM Serif Display', serif; font-weight: 400; margin: 0 0 .35rem; }
+    .lead { font-size: .82rem; color: #b9b9b9; line-height: 1.55; margin: 0 0 1rem; max-width: 58rem; }
+    .card { border: 1px solid rgba(255,255,255,.12); border-radius: 8px; background: #121212; padding: .85rem 1rem; margin-bottom: .75rem; }
+    .card h2 { margin: 0 0 .5rem; font-size: .95rem; letter-spacing: .06em; text-transform: uppercase; color: #d4a420; font-weight: 700; }
+    .row { display: flex; flex-wrap: wrap; gap: .55rem; align-items: flex-end; margin-bottom: .55rem; }
+    label { font-size: .68rem; color: #9a9a9a; display: block; margin-bottom: .2rem; }
+    select, input[type="text"] { background: #191919; border: 1px solid rgba(255,255,255,.16); color: #fff; padding: .4rem .55rem; border-radius: 6px; font-size: .78rem; min-width: 12rem; }
+    .btn { border: 1px solid rgba(255,255,255,.2); background: transparent; color: #ddd; padding: .42rem .85rem; border-radius: 6px; cursor: pointer; font-size: .78rem; }
+    .btn.primary { border-color: #d4a420; color: #d4a420; }
+    .btn:disabled { opacity: .45; cursor: not-allowed; }
+    .mono { font-family: ui-monospace, 'Cascadia Code', Consolas, monospace; font-size: .68rem; line-height: 1.45; white-space: pre-wrap; word-break: break-word; background: #0d0d0d; border: 1px solid rgba(255,255,255,.1); border-radius: 6px; padding: .55rem .65rem; max-height: 220px; overflow: auto; margin: 0; color: #d5d5d5; }
+    details.lab-details { margin-top: .5rem; }
+    details.lab-details summary { cursor: pointer; color: #c9c9c9; font-size: .75rem; margin-bottom: .35rem; }
+    #lab-status { font-size: .74rem; color: #9ad59a; min-height: 1.2em; margin: .35rem 0; }
+    #curation-lab-out { background: #f4f1ea; color: #111; border-radius: 8px; border: 1px solid rgba(255,255,255,.12); padding: .75rem; overflow: auto; max-height: 70vh; }
+    .hint { font-size: .68rem; color: #888; margin-top: .35rem; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>Curation lab</h1>
+    <p class="lead">
+      Inspect the <strong>exact system and user prompts</strong> used for per-article curation (summary + watchouts), pick a <strong>test story</strong> and <strong>newsletter template</strong>, then run curation and see the rendered HTML below.
+      This flow does <strong>not</strong> run translation or touch your saved workspace. AI runs only if keys are saved under Configuration (same storage as Home).
+    </p>
+
+    <div class="card">
+      <h2>1 · Test story &amp; mode</h2>
+      <div class="row">
+        <div>
+          <label for="lab-preset">Test news preset</label>
+          <select id="lab-preset" aria-label="Test news preset"></select>
+        </div>
+        <div>
+          <label for="lab-mode">Curation mode</label>
+          <select id="lab-mode" aria-label="Curation mode">
+            <option value="concise">concise</option>
+            <option value="balanced" selected>balanced</option>
+            <option value="deep">deep</option>
+          </select>
+        </div>
+        <div>
+          <label for="lab-template">Newsletter template</label>
+          <select id="lab-template" aria-label="Newsletter template"></select>
+        </div>
+      </div>
+      <div class="row">
+        <button type="button" class="btn primary" id="lab-btn-refresh">Show prompts</button>
+        <button type="button" class="btn primary" id="lab-btn-run">Run curation &amp; build preview</button>
+      </div>
+      <p id="lab-status" role="status"></p>
+      <p class="hint">Tip: save AI provider + API key in <a href="config.html" style="color:#d4a420">Configuration</a> first. Without a key, curation uses the same local rules as Home offline mode.</p>
+    </div>
+
+    <div class="card">
+      <h2>2 · Per-article curation prompts</h2>
+      <p class="hint" style="margin-top:0">AI curation uses <strong>two sequential requests</strong> per story: (1) summary + threat + category, (2) three watchout lines aligned to that summary. Below shows both system and user sides.</p>
+      <details class="lab-details" open>
+        <summary>System prompts</summary>
+        <pre id="lab-system-per-article" class="mono" aria-label="System prompt"></pre>
+      </details>
+      <details class="lab-details" open>
+        <summary>User prompts</summary>
+        <pre id="lab-user-per-article" class="mono" aria-label="User prompt for article curation"></pre>
+      </details>
+    </div>
+
+    <div class="card">
+      <h2>3 · Edition chrome prompts (build step)</h2>
+      <p class="hint" style="margin-top:0">When AI builds edition chrome, this is <strong>two sequential requests</strong>: (1) kicker, spotlight line, footer blurb; (2) edition-wide takeaway lines mapped to the story mix.</p>
+      <details class="lab-details">
+        <summary>System prompt</summary>
+        <pre id="lab-system-chrome" class="mono"></pre>
+      </details>
+      <details class="lab-details">
+        <summary>User prompt (stories JSON)</summary>
+        <pre id="lab-user-chrome" class="mono"></pre>
+      </details>
+    </div>
+
+    <div class="card">
+      <h2>4 · Output preview</h2>
+      <div id="curation-lab-out"><p style="margin:0;color:#666;font-size:.85rem">Run curation &amp; build preview to render the newsletter HTML here.</p></div>
+    </div>
+  </div>
+
+  <script src="js/utils.js"></script>
+  <script src="js/db.js"></script>
+  <script src="js/router_nav.js"></script>
+  <script src="js/ux_contract.js"></script>
+  <script src="js/feed_scoring.js"></script>
+  <script src="js/keyword_store.js"></script>
+  <script src="js/ai/prompts.js"></script>
+  <script src="js/ai/local_fallbacks.js"></script>
+  <script src="js/ai/logger.js"></script>
+  <script src="js/ai_summarizer.js"></script>
+  <script src="js/ai/prompt_builders.js"></script>
+  <script src="js/ai/bank_page_ensemble.js"></script>
+  <script src="js/graphics_engine.js"></script>
+  <script src="assets/template_assets.js"></script>
+  <script src="js/newsletter_builder.js"></script>
+  <script src="js/newsletter/bank_page.js"></script>
+  <script src="js/newsletter/core_templates.js"></script>
+  <script>
+    const AI_SETTINGS_STORAGE_KEY = 'awareness_ai_settings_v1';
+    const AI_KEY_SESSION_STORAGE_KEY = 'awareness_ai_key_session_v1';
+
+    const LAB_PRESETS = [
+      {
+        id: 'npm_supply',
+        label: 'npm / SAP supply chain (TeamPCP style)',
+        article: {
+          title: 'SAP npm package attack highlights risks in developer tools and CI/CD pipelines',
+          description: 'Several npm packages were compromised. Malicious versions added install-time code that could steal developer credentials, GitHub and npm tokens, GitHub Actions secrets, and cloud credentials from AWS, Azure, GCP, and Kubernetes environments.',
+          source: 'Lab — supply chain',
+          pubDate: '2026-05-01',
+          type: 'Security News',
+          url: '#',
+          sourceId: 'lab'
+        }
+      },
+      {
+        id: 'phish_exec',
+        label: 'Executive phishing (fake voicemail)',
+        article: {
+          title: 'Fake voicemail links target executives with urgency themes',
+          description: 'Attackers send email that mimics internal voicemail notifications. Links lead to a credential harvester that copies the corporate login page.',
+          source: 'Lab — phishing',
+          pubDate: '2026-05-01',
+          type: 'Phishing',
+          url: '#',
+          sourceId: 'lab'
+        }
+      },
+      {
+        id: 'smish_delivery',
+        label: 'Smishing — parcel payment scam',
+        article: {
+          title: 'Carrier text scam asks for a fee to release a held parcel',
+          description: 'Recipients receive SMS claiming a package is held until a small fee is paid through a link. The link is phishing and harvests card data.',
+          source: 'Lab — smishing',
+          pubDate: '2026-05-01',
+          type: 'Smishing',
+          url: '#',
+          sourceId: 'lab'
+        }
+      }
+    ];
+
+    function applyAiFromStorage() {
+      try {
+        const ai = JSON.parse(localStorage.getItem(AI_SETTINGS_STORAGE_KEY) || 'null');
+        const prov = (ai && ai.provider) || 'claude';
+        // AI key is intentionally session-only — never read from localStorage.
+        const sessionKey = sessionStorage.getItem(AI_KEY_SESSION_STORAGE_KEY) || '';
+        if (!sessionKey) return;
+        App.AISummarizer.configure({
+          provider: prov,
+          claudeKey: prov === 'claude' ? sessionKey : '',
+          openaiKey: prov === 'openai' ? sessionKey : ''
+        });
+      } catch (e) { /* ignore */ }
+    }
+
+    function cloneArticle(a) {
+      return { ...a, watchouts: Array.isArray(a.watchouts) ? [...a.watchouts] : undefined };
+    }
+
+    function getSelectedArticle() {
+      const id = document.getElementById('lab-preset').value;
+      const preset = LAB_PRESETS.find((p) => p.id === id);
+      return preset ? cloneArticle(preset.article) : cloneArticle(LAB_PRESETS[0].article);
+    }
+
+    function fillPrompts() {
+      applyAiFromStorage();
+      const art = getSelectedArticle();
+      const mode = document.getElementById('lab-mode').value;
+      const per = App.AISummarizer.previewArticleCurationPrompts(art, { mode });
+      document.getElementById('lab-system-per-article').textContent =
+        `=== Request 1 (core: summary, threat, category) ===\n\n${per.systemPromptCore}\n\n=== Request 2 (watchouts only) ===\n\n${per.systemPromptWatchouts}`;
+      document.getElementById('lab-user-per-article').textContent =
+        `=== Request 1 (core) ===\n\n${per.userPromptCore}\n\n=== Request 2 (watchouts) ===\n\n${per.userPromptWatchouts}`;
+      const chrome = App.AISummarizer.previewNewsletterChromePrompts([art]);
+      document.getElementById('lab-system-chrome').textContent = chrome.systemPrompt;
+      document.getElementById('lab-user-chrome').textContent =
+        `=== Request 1 (frame: kicker, spotlight, footer) ===\n\n${chrome.userPromptFrame}\n\n=== Request 2 (nlTakeaways only) ===\n\n${chrome.userPromptTakeaways}`;
+    }
+
+    async function runCurationAndBuild() {
+      const status = document.getElementById('lab-status');
+      applyAiFromStorage();
+      const useAi = App.AISummarizer.isAIAvailable();
+      const art = getSelectedArticle();
+      const mode = document.getElementById('lab-mode').value;
+      status.textContent = useAi ? 'Running AI curation…' : 'Using local curation (no AI key in storage)…';
+      status.style.color = '#9ad59a';
+      try {
+        if (useAi) {
+          const r = await App.AISummarizer.summarizeArticle(art, { mode });
+          if (r.summary) art.summary = r.summary;
+          if (r.watchouts) art.watchouts = r.watchouts;
+          if (r.threatLevel) art.threatLevel = r.threatLevel;
+          if (r.category && art.type === 'Security News') art.type = r.category;
+          art.aiProcessed = !r.fallbackUsed;
+        } else {
+          const r = App.AISummarizer.localSummarize(art, mode);
+          art.summary = r.summary;
+          art.watchouts = r.watchouts;
+          art.threatLevel = r.threatLevel;
+          art.type = r.category || art.type;
+          art.aiProcessed = false;
+        }
+        const arts = [art];
+        let nlChrome = App.AISummarizer.localNewsletterChrome(arts);
+        if (useAi) {
+          try {
+            nlChrome = await App.AISummarizer.newsletterChrome(arts, { mode });
+          } catch (e) {
+            nlChrome = App.AISummarizer.localNewsletterChrome(arts);
+          }
+        }
+        App.AISummarizer.dedupeWatchoutsAcrossArticles(arts);
+        const format = document.getElementById('lab-template').value;
+        let textSlots = {};
+        try {
+          if (typeof App.AISummarizer.fillNewsletterTextSlots === 'function') {
+            textSlots = await App.AISummarizer.fillNewsletterTextSlots(format, arts, {
+              mode,
+              forceLocal: !useAi
+            });
+          }
+        } catch (_e) {
+          textSlots = {};
+        }
+        const cfg = {
+          freq: 'Weekly',
+          soc: 'soc@example.com',
+          max: 1,
+          org: 'Example Organization',
+          portal: 'https://security.example.com/awareness',
+          pname: 'Security Awareness Portal',
+          title: 'Curation lab preview',
+          issueDate: new Date().toISOString().split('T')[0],
+          status: 'draft',
+          campaignName: '',
+          audience: 'All staff',
+          owner: 'Security team',
+          ...nlChrome,
+          ...textSlots
+        };
+        const opts = {
+          useLinks: true,
+          usePoster: true,
+          useQR: false,
+          useIllus: true,
+          useMotion: false,
+          renderChannel: 'email-safe'
+        };
+        const html = App.NewsletterBuilder.build(format, cfg, arts, opts);
+        document.getElementById('curation-lab-out').innerHTML = html;
+        fillPrompts();
+        status.textContent = useAi ? 'Done (AI curation). Scroll the preview panel above.' : 'Done (local curation). Add an API key in Config for live AI output.';
+      } catch (err) {
+        status.style.color = '#ff9999';
+        status.textContent = `Error: ${err.message || err}`;
+      }
+    }
+
+    function initLab() {
+      const presetSel = document.getElementById('lab-preset');
+      presetSel.innerHTML = LAB_PRESETS.map((p) => `<option value="${p.id}">${p.label.replace(/</g, '')}</option>`).join('');
+      const tplSel = document.getElementById('lab-template');
+      const catalog = App.NewsletterBuilder.getTemplateCatalog?.() || [];
+      tplSel.innerHTML = catalog.map((t) => `<option value="${t.id}">${t.name.replace(/</g, '')}</option>`).join('');
+      document.getElementById('lab-btn-refresh').addEventListener('click', () => {
+        fillPrompts();
+        document.getElementById('lab-status').textContent = 'Prompts updated.';
+        document.getElementById('lab-status').style.color = '#9ad59a';
+      });
+      document.getElementById('lab-btn-run').addEventListener('click', () => void runCurationAndBuild());
+      document.getElementById('lab-preset').addEventListener('change', fillPrompts);
+      document.getElementById('lab-mode').addEventListener('change', fillPrompts);
+      fillPrompts();
+    }
+
+    App.UXContract.init({ pageId: 'curation-lab', flowStepId: 'curate' });
+    initLab();
+  </script>
+</body>
+</html>

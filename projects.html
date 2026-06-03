@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1.0">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https:; connect-src 'self' http://127.0.0.1:4175 https://api.anthropic.com https://api.openai.com https://api.allorigins.win https://corsproxy.io https://api.codetabs.com https://api.rss2json.com https:; frame-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'">
+  <meta name="referrer" content="strict-origin-when-cross-origin">
+  <title>Projects - Awareness Newsletter</title>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&family=DM+Serif+Display&display=swap" rel="stylesheet">
+  <style>
+    body{margin:0;background:#0a0a0a;color:#fff;font-family:'DM Sans',sans-serif}
+    .wrap{max-width:1100px;margin:0 auto;padding:1.2rem}
+    .nav{display:flex;gap:.5rem;flex-wrap:wrap;margin-bottom:.75rem}
+    .toolbar{display:flex;gap:.5rem;flex-wrap:wrap;align-items:center;margin-bottom:.75rem}
+    .btn{border:1px solid rgba(255,255,255,.2);background:transparent;color:#ddd;padding:.4rem .7rem;border-radius:6px;cursor:pointer}
+    .btn.primary{border-color:#d4a420;color:#d4a420}
+    .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:.7rem}
+    .list{display:flex;flex-direction:column;gap:.55rem}
+    .card{border:1px solid rgba(255,255,255,.12);border-radius:8px;padding:.8rem;background:#121212}
+    .meta{font-size:.75rem;color:#b4b4b4}
+    .rowline{display:flex;gap:.45rem;align-items:center;flex-wrap:wrap}
+    input,select{background:#171717;border:1px solid rgba(255,255,255,.15);color:#fff;padding:.45rem .55rem;border-radius:6px}
+    @media (max-width: 640px){
+      .wrap{padding:.75rem}
+      .btn{flex:1;min-width:120px;text-align:center}
+      #projects.grid{grid-template-columns:1fr}
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1 style="font-family:'DM Serif Display',serif;margin:.2rem 0 1rem">Projects</h1>
+    <div class="nav">
+      <button class="btn primary" id="new-project">Create New Project</button>
+      <button class="btn" onclick="App.RouterNav.goto('index.html#section-home', { source: 'projects', clearProjectContext: true })">Home</button>
+      <button class="btn" onclick="App.RouterNav.goto('preview.html', App.RouterNav.getHandoff() || { source: 'projects' })">Preview</button>
+      <button class="btn" onclick="App.RouterNav.goto('editor.html', App.RouterNav.getHandoff() || { source: 'projects' })">Editor</button>
+      <button class="btn" onclick="App.RouterNav.goto('send.html', App.RouterNav.getHandoff() || { source: 'projects' })">Send</button>
+      <button class="btn" onclick="window.location.href='keywords.html'">Keywords</button>
+      <button class="btn" onclick="window.location.href='config.html'">Config</button>
+      <button class="btn" onclick="App.RouterNav.goto('index.html#section-home', { source: 'projects', clearProjectContext: true })">Legacy Single-Page</button>
+      <input id="search" placeholder="Search projects...">
+    </div>
+    <div class="toolbar">
+      <select id="status-filter">
+        <option value="all">All status</option>
+        <option value="draft">Draft</option>
+        <option value="review">Review</option>
+        <option value="approved">Approved</option>
+        <option value="sent">Sent</option>
+        <option value="archived">Archived</option>
+      </select>
+      <select id="date-filter">
+        <option value="all">Any date</option>
+        <option value="7">Updated in 7 days</option>
+        <option value="30">Updated in 30 days</option>
+        <option value="90">Updated in 90 days</option>
+      </select>
+      <select id="sort-by">
+        <option value="updatedAt-desc">Updated (newest)</option>
+        <option value="updatedAt-asc">Updated (oldest)</option>
+        <option value="title-asc">Title (A-Z)</option>
+        <option value="title-desc">Title (Z-A)</option>
+        <option value="createdAt-desc">Created (newest)</option>
+      </select>
+      <div class="rowline">
+        <button class="btn" id="view-grid">Grid</button>
+        <button class="btn" id="view-list">List</button>
+      </div>
+    </div>
+    <div id="stats" class="meta" style="margin-bottom:.75rem"></div>
+    <div id="projects" class="grid"></div>
+  </div>
+
+  <script src="js/db.js"></script>
+  <script src="js/router_nav.js"></script>
+  <script src="js/ux_contract.js"></script>
+  <script src="js/project_store.js"></script>
+  <script>
+    App.UXContract?.init({ pageId: 'projects', flowStepId: 'approve' });
+    let viewMode = 'grid';
+
+    function withinDays(ts, days) {
+      if (!days || days === 'all') return true;
+      const ms = Number(days) * 24 * 60 * 60 * 1000;
+      return (Date.now() - new Date(ts || 0).getTime()) <= ms;
+    }
+
+    function sortProjects(items, sortBy) {
+      const [field, dir] = (sortBy || 'updatedAt-desc').split('-');
+      const sign = dir === 'asc' ? 1 : -1;
+      return [...items].sort((a, b) => {
+        if (field === 'title') return ((a.title || '').localeCompare(b.title || '')) * sign;
+        return ((new Date(a[field] || 0).getTime()) - (new Date(b[field] || 0).getTime())) * sign;
+      });
+    }
+
+    async function render() {
+      await App.ProjectStore.ensureMigrated();
+      const list = await App.ProjectStore.list();
+      const q = (document.getElementById('search').value || '').trim().toLowerCase();
+      const status = document.getElementById('status-filter').value;
+      const dateRange = document.getElementById('date-filter').value;
+      const sortBy = document.getElementById('sort-by').value;
+      const filtered = list.filter(p => {
+        const okText = !q || (p.title || '').toLowerCase().includes(q) || (p.owner || '').toLowerCase().includes(q);
+        const okStatus = status === 'all' || (p.status || 'draft') === status;
+        const okDate = withinDays(p.updatedAt, dateRange);
+        return okText && okStatus && okDate;
+      });
+      const ordered = sortProjects(filtered, sortBy);
+      document.getElementById('stats').textContent = `${ordered.length} project(s) · ${viewMode} view`;
+      const projectsEl = document.getElementById('projects');
+      projectsEl.className = viewMode === 'list' ? 'list' : 'grid';
+      projectsEl.innerHTML = ordered.map(p => {
+        const snaps = Array.isArray(p.snapshots) ? [...p.snapshots].sort((a, b) => Number(b.version) - Number(a.version)) : [];
+        let versionOpts = `<option value="">Current (v${p.version || 1})</option>`;
+        for (const s of snaps) {
+          const label = `v${s.version} — ${s.capturedAt ? new Date(s.capturedAt).toLocaleString() : ''}`;
+          versionOpts += `<option value="${s.version}">${label.replace(/</g, '')}</option>`;
+        }
+        const pid = String(p.projectId || '').replace(/"/g, '');
+        return `
+        <div class="card" data-project-id="${pid}">
+          <div style="display:flex;justify-content:space-between;gap:.6rem;align-items:flex-start;flex-wrap:wrap">
+            <strong>${p.title || 'Untitled Project'}</strong>
+            <span class="meta">${p.status || 'draft'}</span>
+          </div>
+          <div class="meta" style="margin:.35rem 0">
+            Owner: ${p.owner || 'Unassigned'} · Created: ${new Date(p.createdAt || Date.now()).toLocaleDateString()} · Updated: ${new Date(p.updatedAt || Date.now()).toLocaleString()}
+          </div>
+          <label class="meta" style="display:flex;flex-direction:column;gap:.25rem;margin:.35rem 0;width:100%;min-width:0">
+            <span>Version to open</span>
+            <select class="proj-version-select" aria-label="Version to open" style="max-width:100%;background:#191919;border:1px solid rgba(255,255,255,.16);color:#fff;padding:.4rem .55rem;border-radius:6px">${versionOpts}</select>
+          </label>
+          <div style="display:flex;gap:.4rem;flex-wrap:wrap">
+            <button class="btn primary" type="button" onclick="openProjectFromCard(this)">Open</button>
+            <button class="btn" onclick="renameProject('${p.projectId}')">Rename</button>
+            <button class="btn" onclick="duplicateProject('${p.projectId}')">Duplicate</button>
+            <button class="btn" onclick="archiveProject('${p.projectId}')">Archive</button>
+            <button class="btn" onclick="setProjectStatus('${p.projectId}','review')">To Review</button>
+            <button class="btn" onclick="setProjectStatus('${p.projectId}','approved')">Approve</button>
+            <button class="btn" onclick="deleteProject('${p.projectId}')">Delete</button>
+            <button class="btn" onclick="App.RouterNav.goto('send.html',{ projectId: '${p.projectId}' })">Quick Send</button>
+          </div>
+        </div>`;
+      }).join('') || '<div class="meta">No projects yet.</div>';
+    }
+
+    function openProjectFromCard(btn) {
+      const card = btn.closest('[data-project-id]');
+      if (!card) return;
+      const projectId = card.getAttribute('data-project-id');
+      const sel = card.querySelector('.proj-version-select');
+      const raw = sel && sel.value ? Number(sel.value) : NaN;
+      const payload = { projectId, source: 'projects' };
+      if (!Number.isNaN(raw) && raw > 0) payload.projectSnapshotVersion = raw;
+      App.RouterNav.goto('preview.html', payload);
+    }
+
+    async function renameProject(projectId) {
+      const p = await App.ProjectStore.get(projectId); if (!p) return;
+      const title = prompt('New project name', p.title || 'Untitled Project');
+      if (!title) return;
+      await App.DB.saveProject({ ...p, title });
+      await render();
+    }
+    async function duplicateProject(projectId) {
+      const p = await App.ProjectStore.get(projectId); if (!p) return;
+      await App.DB.saveProject({ ...p, projectId: `project_${Date.now()}`, title: `${p.title || 'Untitled'} (Copy)` });
+      await render();
+    }
+    async function archiveProject(projectId) {
+      const p = await App.ProjectStore.get(projectId); if (!p) return;
+      await App.DB.saveProject({ ...p, status: 'archived' });
+      await render();
+    }
+    async function setProjectStatus(projectId, status) {
+      const p = await App.ProjectStore.get(projectId); if (!p) return;
+      await App.DB.saveProject({ ...p, status });
+      await render();
+    }
+    async function deleteProject(projectId) {
+      if (!confirm('Delete this project?')) return;
+      await App.ProjectStore.remove(projectId);
+      await render();
+    }
+
+    document.getElementById('search').addEventListener('input', render);
+    document.getElementById('status-filter').addEventListener('change', render);
+    document.getElementById('date-filter').addEventListener('change', render);
+    document.getElementById('sort-by').addEventListener('change', render);
+    document.getElementById('view-grid').addEventListener('click', () => { viewMode = 'grid'; render(); });
+    document.getElementById('view-list').addEventListener('click', () => { viewMode = 'list'; render(); });
+    document.getElementById('new-project').addEventListener('click', async () => {
+      const title = prompt('Project title', 'New Awareness Project');
+      if (!title) return;
+      const rec = await App.DB.saveProject({ title, status: 'draft', metadata: {}, languageVariants: {}, workflow: null, snapshots: [] });
+      App.RouterNav.goto('index.html#section-home', { projectId: rec.projectId, source: 'projects' });
+    });
+    render();
+  </script>
+</body>
+</html>

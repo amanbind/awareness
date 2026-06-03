@@ -1,0 +1,36 @@
+{
+  "scripts": {
+    "serve": "node scripts/dev_servers.mjs",
+    "serve:static": "serve -l tcp://127.0.0.1:4173 .",
+    "relay:graph": "node scripts/graph_relay_server.mjs",
+    "ensemble:logs": "node scripts/ensemble_log_server.mjs",
+    "lint": "eslint .",
+    "test:unit": "node --test tests/unit/*.test.js",
+    "test:e2e": "playwright test",
+    "security:test": "node --test tests/unit/security.test.js",
+    "audit:baseline": "node scripts/run_with_static_server.js node scripts/run_baseline_critical_path_audit.js",
+    "audit:deps": "npm audit --audit-level=moderate",
+    "build:dist": "node scripts/build-dist.mjs",
+    "deploy:server": "node scripts/deploy-server.mjs",
+    "deploy:docker": "node scripts/deploy-docker.mjs",
+    "verify": "npm run lint && npm run test:unit && npm run test:e2e && npm run audit:baseline",
+    "templates:normalize-imports": "node scripts/normalize-imported-templates.mjs",
+    "build:image-library": "node scripts/build-image-library.mjs",
+    "build:template-assets": "node scripts/build-template-assets.mjs"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.97.0",
+    "playwright": "^1.59.1"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@playwright/test": "^1.59.1",
+    "eslint": "^10.2.1",
+    "eslint-plugin-no-unsanitized": "^4.1.5",
+    "eslint-plugin-security": "^4.0.0",
+    "globals": "^17.5.0",
+    "jsdom": "^26.0.0",
+    "marked": "^18.0.4",
+    "serve": "^14.2.6"
+  }
+}

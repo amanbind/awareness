@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1.0">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https:; connect-src 'self' http://127.0.0.1:4175 https://api.anthropic.com https://api.openai.com https://api.allorigins.win https://corsproxy.io https://api.codetabs.com https://api.rss2json.com https:; frame-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'">
+  <meta name="referrer" content="strict-origin-when-cross-origin">
+  <title>Preview - Awareness Newsletter</title>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&family=DM+Serif+Display&display=swap" rel="stylesheet">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js" integrity="sha384-3zSEDfvllQohrq0PHL1fOXJuC/jSOO34H46t6UQfobFOmxE5BpjjaIJY5F2/bMnU" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js" integrity="sha384-+mbV2IY1Zk/X1p/nWllGySJSUN8uMs+gUAN10Or95UBH0fpj6GfKgPmgC5EXieXG" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+  <style>
+    body{margin:0;background:#0a0a0a;color:#fff;font-family:'DM Sans',sans-serif}
+    .wrap{max-width:1120px;margin:0 auto;padding:1rem}
+    .btn{border:1px solid rgba(255,255,255,.2);background:transparent;color:#ddd;padding:.45rem .8rem;border-radius:6px;cursor:pointer}
+    .btn.primary{border-color:#d4a420;color:#d4a420}
+    .card{border:1px solid rgba(255,255,255,.12);border-radius:8px;background:#121212;padding:.8rem;margin-bottom:.7rem}
+    .toolbar{display:flex;gap:.45rem;flex-wrap:wrap;align-items:center}
+    .field{display:flex;flex-direction:column;gap:.28rem;min-width:230px}
+    .field span{font-size:.68rem;color:#aaa;text-transform:uppercase;letter-spacing:.06em}
+    input,select{background:#191919;border:1px solid rgba(255,255,255,.16);color:#fff;padding:.45rem .55rem;border-radius:6px}
+    #project-version-label{font-size:.75rem;color:#d4a420}
+    #lang-translating{display:none;font-size:.72rem;color:#d4a420}
+    #lang-translating.active{display:inline}
+    .preview{background:#111;border:1px solid rgba(255,255,255,.12);border-radius:8px;padding:.7rem}
+    #nl-out{max-width:700px;margin:0 auto;background:#fff;color:#000}
+    @media (max-width: 640px){
+      .wrap{padding:.65rem}
+      .btn{flex:1;min-width:128px}
+      .field{min-width:100%}
+      #nl-out{max-width:100%}
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1 style="font-family:'DM Serif Display',serif;margin:.2rem 0 .8rem">Preview</h1>
+    <div class="card">
+      <div class="toolbar">
+        <button class="btn" onclick="App.UI.goBackToBuilder()">← Back to Builder</button>
+        <label class="field">
+          <span>Project name</span>
+          <input id="project-title" placeholder="newsletter_YYYY-MM-DD">
+        </label>
+        <span id="project-version-label">Unsaved project</span>
+        <button class="btn primary" onclick="App.UI.saveProjectVersion()">Save Project</button>
+        <button class="btn primary" onclick="App.UI.goToEditorPage()">Open in Editor</button>
+        <button class="btn" onclick="App.UI.goToHomePage()">Home</button>
+        <button class="btn" onclick="App.UI.goToProjectsPage()">Projects</button>
+        <button class="btn" onclick="window.location.href='config.html'">Config</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="toolbar">
+        <label class="field">
+          <span>Language</span>
+          <select id="preview-lang" onchange="App.UI.switchPreviewLanguage(this.value)"></select>
+        </label>
+        <span id="lang-translating">Translating...</span>
+        <select id="wf-next-state"></select>
+        <span id="wf-state-chip" style="padding:.3rem .6rem;border:1px solid #555;border-radius:999px">Draft</span>
+        <button class="btn" onclick="App.UI.transitionWorkflow()">Move</button>
+        <button class="btn" onclick="App.UI.downloadCurrentHTML()" title="Download the selected language as one HTML file">HTML</button>
+        <button class="btn" onclick="void App.UI.downloadCurrentEml()" title="Send-ready .eml — open in Outlook, add recipients, Send">EML</button>
+        <button class="btn" onclick="void App.UI.downloadCurrentMsg()" title="Send-ready Outlook .msg — open in Outlook, add recipients, Send">MSG</button>
+        <button class="btn" onclick="App.UI.downloadAllHTML()" title="Download ZIP with html/ and svg/ folders">Download All</button>
+        <button class="btn primary" onclick="App.UI.goToSendPage()">Send</button>
+      </div>
+      <div id="translation-pipeline-state" aria-live="polite" style="margin-top:.55rem"></div>
+    </div>
+
+    <div class="preview">
+      <div class="nl" id="nl-out"></div>
+    </div>
+  </div>
+
+  <input id="cfg-freq" value="Weekly" hidden><input id="cfg-soc" value="SOC-support@abc.com" hidden>
+  <input id="cfg-max" value="2" hidden>
+  <input id="cfg-org" value="ABC Corp" hidden>
+  <input id="cfg-portal" value="https://security.abc.com/awareness" hidden>
+  <input id="cfg-pname" value="ABC Security Awareness Portal" hidden>
+  <input id="meta-title" hidden><input id="meta-issue-date" hidden><input id="meta-status" value="draft" hidden>
+  <input id="feat-poster" type="checkbox" checked hidden><input id="feat-links" type="checkbox" checked hidden><input id="feat-qr" type="checkbox" checked hidden><input id="feat-illus" type="checkbox" checked hidden>
+  <input id="feat-ai" type="checkbox" checked hidden><input id="ai-provider" value="claude" hidden><input id="ai-key" hidden>
+  <input id="smtp-relay-url" hidden><input id="smtp-host" hidden><input id="smtp-port" value="587" hidden><input id="smtp-username" hidden><input id="smtp-password" hidden>
+  <input id="smtp-from-name" value="Security Team" hidden><input id="smtp-from-address" hidden><input id="smtp-test-to" hidden><input id="smtp-send-to" hidden><input id="smtp-secure" type="checkbox" checked hidden>
+  <select id="delivery-method" hidden><option value="smtp">SMTP relay (legacy)</option><option value="graph">Microsoft Graph (Outlook)</option></select>
+  <input id="graph-tenant-id" hidden><input id="graph-client-id" hidden><input id="graph-client-secret" hidden>
+  <div id="delivery-graph-panel" hidden></div><div id="delivery-smtp-panel" hidden></div>
+  <div id="saved-drafts-list" hidden></div><div id="delivery-log-list" hidden></div><div id="db-stats" hidden></div><div id="feed-status-area" hidden></div><div id="feed-sources-dashboard" hidden></div><div id="sb-feeds-list" hidden></div><div id="articles-area" hidden></div>
+
+  <script src="js/utils.js"></script>
+  <script src="js/db.js"></script>
+  <script src="js/router_nav.js"></script>
+  <script src="js/ux_contract.js"></script>
+  <script src="js/feed_scoring.js"></script>
+  <script src="js/keyword_store.js"></script>
+  <script src="js/project_store.js"></script>
+  <script src="js/responsive_layout.js"></script>
+  <script src="js/rss_fetcher.js"></script>
+  <script src="js/ai/prompts.js"></script>
+  <script src="js/ai/local_fallbacks.js"></script>
+  <script src="js/ai/logger.js"></script>
+  <script src="js/ai_summarizer.js"></script>
+  <script src="js/ai/prompt_builders.js"></script>
+  <script src="js/ai/bank_page_ensemble.js"></script>
+  <script src="js/graphics_engine.js"></script>
+  <script src="assets/template_assets.js"></script>
+  <script src="js/newsletter_builder.js"></script>
+  <script src="js/newsletter/bank_page.js"></script>
+  <script src="js/newsletter/core_templates.js"></script>
+  <script src="js/translation_metrics.js"></script>
+  <script src="js/delivery_helpers.js"></script>
+  <script src="js/msg_writer.js"></script>
+  <script src="js/ui_controller.js"></script>
+  <script src="js/ui/translation.js"></script>
+  <script src="js/ui/ai_experiment.js"></script>
+  <script src="js/ui/generate_pipeline.js"></script>
+  <script src="js/ui/sidebar_manager.js"></script>
+  <script src="js/editor/iframe_script.js"></script>
+  <script src="js/editor.js"></script>
+  <script>
+    App.UXContract?.init({ pageId: 'preview', flowStepId: 'preview', guard: 'workspace-required' });
+    if (App.ResponsiveLayout?.init) App.ResponsiveLayout.init();
+    App.UI.init();
+  </script>
+</body>
+</html>

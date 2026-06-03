@@ -1,0 +1,232 @@
+{
+  "C:\\Users\\hp\\OneDrive\\Desktop\\awareness\\babel.json": {
+    "mtime": 1780062368.2069113,
+    "ast_hash": "1361a490d4ed3059058731f8a3240f03",
+    "semantic_hash": "1361a490d4ed3059058731f8a3240f03"
+  },
+  "C:\\Users\\hp\\OneDrive\\Desktop\\awareness\\eslint.config.js": {
+    "mtime": 1779733946.0,
+    "ast_hash": "b6a95276f55bf8147ad7e4618f9d01ea",
+    "semantic_hash": "b6a95276f55bf8147ad7e4618f9d01ea"
+  },
+  "C:\\Users\\hp\\OneDrive\\Desktop\\awareness\\package.json": {
+    "mtime": 1780044840.4493282,
+    "ast_hash": "e000bebd18465eff26e801358a77b6f7",
+    "semantic_hash": "e000bebd18465eff26e801358a77b6f7"
+  },
+  "C:\\Users\\hp\\OneDrive\\Desktop\\awareness\\playwright.config.js": {
+    "mtime": 1779181932.0,
+    "ast_hash": "21cb0671ef5077c0ce9d848a90c28af1",
+    "semantic_hash": "21cb0671ef5077c0ce9d848a90c28af1"
+  },
+  "C:\\Users\\hp\\OneDrive\\Desktop\\awareness\\assets\\template_assets.js": {
+    "mtime": 1780044849.9664524,
+    "ast_hash": "2c2b2d36aad950ddb3db08177661fd8f",
+    "semantic_hash": "2c2b2d36aad950ddb3db08177661fd8f"
+  },
+  "C:\\Users\\hp\\OneDrive\\Desktop\\awareness\\assets\\image-library\\library.js": {
+    "mtime": 1780040304.2703521,
+    "ast_hash": "596d6bbc6b16ffb69de316ed31eec393",
+    "semantic_hash": "596d6bbc6b16ffb69de316ed31eec393"
+  },
+  "C:\\Users\\hp\\OneDrive\\Desktop\\awareness\\assets\\image-library\\manifest.json": {
+    "mtime": 1779694078.0,
+    "ast_hash": "846b40ef318c4bacac444cac0c6c3d95",
+    "semantic_hash": "846b40ef318c4bacac444cac0c6c3d95"
+  },
+  "C:\\Users\\hp\\OneDrive\\Desktop\\awareness\\js\\ai_summarizer.js": {
+    "mtime": 1780043314.72576,
+    "ast_hash": "b2c58109cc1fdd69cbf7bacaf41420be",
+    "semantic_hash": "b2c58109cc1fdd69cbf7bacaf41420be"
+  },
+  "C:\\Users\\hp\\OneDrive\\Desktop\\awareness\\js\\db.js": {
+    "mtime": 1779962501.459527,
+    "ast_hash": "1d436cd8b30cc9938f1fd74768ec9590",
+    "semantic_hash": "1d436cd8b30cc9938f1fd74768ec9590"
+  },
+  "C:\\Users\\hp\\OneDrive\\Desktop\\awareness\\js\\delivery_helpers.js": {
+    "mtime": 1779181932.0,
+    "ast_hash": "ce4e2d706a56470fe25f6f566085c720",
+    "semantic_hash": "ce4e2d706a56470fe25f6f566085c720"
+  },
+  "C:\\Users\\hp\\OneDrive\\Desktop\\awareness\\js\\editor.js": {
+    "mtime": 1780040037.4967291,
+    "ast_hash": "669ffbde8f8509f32ef5dbdc94ef8baa",
+    "semantic_hash": "669ffbde8f8509f32ef5dbdc94ef8baa"
+  },
+  "C:\\Users\\hp\\OneDrive\\Desktop\\awareness\\js\\feed_scoring.js": {
+    "mtime": 1779181932.0,
+    "ast_hash": "67699970d67008502c7a8fc8bc710cb5",
+    "semantic_hash": "67699970d67008502c7a8fc8bc710cb5"
+  },
+  "C:\\Users\\hp\\OneDrive\\Desktop\\awareness\\js\\graphics_engine.js": {
+    "mtime": 1779907164.5784674,
+    "ast_hash": "f56157c61ef599ab97714e9a534fb85a",
+    "semantic_hash": "f56157c61ef599ab97714e9a534fb85a"
+  },
+  "C:\\Users\\hp\\OneDrive\\Desktop\\awareness\\js\\keyword_store.js": {
+    "mtime": 1779181932.0,
+    "ast_hash": "e83a100a87c1d952a4146a8668c48848",
+    "semantic_hash": "e83a100a87c1d952a4146a8668c48848"
+  },
+  "C:\\Users\\hp\\OneDrive\\Desktop\\awareness\\js\\msg_writer.js": {
+    "mtime": 1780034195.872354,
+    "ast_hash": "25afb76fa9288d8ec88fa3f8f3a78cb0",
+    "semantic_hash": "25afb76fa9288d8ec88fa3f8f3a78cb0"
+  },
+  "C:\\Users\\hp\\OneDrive\\Desktop\\awareness\\js\\newsletter_builder.js": {
+    "mtime": 1780042084.665122,
+    "ast_hash": "93692a2760297c758ee8d3cd1a059e68",
+    "semantic_hash": "93692a2760297c758ee8d3cd1a059e68"
+  },
+  "C:\\Users\\hp\\OneDrive\\Desktop\\awareness\\js\\project_store.js": {
+    "mtime": 1779181934.0,
+    "ast_hash": "dc46e8d885bb5414cf4ce7ff555cf7d4",
+    "semantic_hash": "dc46e8d885bb5414cf4ce7ff555cf7d4"
+  },
+  "C:\\Users\\hp\\OneDrive\\Desktop\\awareness\\js\\responsive_layout.js": {
+    "mtime": 1779181934.0,
+    "ast_hash": "794004c393219499c79a25c7b54b8d6e",
+    "semantic_hash": "794004c393219499c79a25c7b54b8d6e"
+  },
+  "C:\\Users\\hp\\OneDrive\\Desktop\\awareness\\js\\router_nav.js": {
+    "mtime": 1779181934.0,
+    "ast_hash": "b56aa713bd994cab4491bbff68d05d7c",
+    "semantic_hash": "b56aa713bd994cab4491bbff68d05d7c"
+  },
+  "C:\\Users\\hp\\OneDrive\\Desktop\\awareness\\js\\rss_fetcher.js": {
+    "mtime": 1779962105.0925539,
+    "ast_hash": "ef91cc75bbf50a617b41a33f69ac6aa9",
+    "semantic_hash": "ef91cc75bbf50a617b41a33f69ac6aa9"
+  },
+  "C:\\Users\\hp\\OneDrive\\Desktop\\awareness\\js\\translation_metrics.js": {
+    "mtime": 1779181934.0,
+    "ast_hash": "d949cada158a33549130ac1fb0cf6b5f",
+    "semantic_hash": "d949cada158a33549130ac1fb0cf6b5f"
+  },
+  "C:\\Users\\hp\\OneDrive\\Desktop\\awareness\\js\\ui_controller.js": {
+    "mtime": 1780034352.284559,
+    "ast_hash": "024029cba637adee66b6714f5e4feb06",
+    "semantic_hash": "024029cba637adee66b6714f5e4feb06"
+  },
+  "C:\\Users\\hp\\OneDrive\\Desktop\\awareness\\js\\utils.js": {
+    "mtime": 1780032498.040391,
+    "ast_hash": "6789178684ad4cda2673d9c304da50f3",
+    "semantic_hash": "6789178684ad4cda2673d9c304da50f3"
+  },
+  "C:\\Users\\hp\\OneDrive\\Desktop\\awareness\\js\\ux_contract.js": {
+    "mtime": 1779689830.0,
+    "ast_hash": "3eaf4a803693008ea0e57334602862f8",
+    "semantic_hash": "3eaf4a803693008ea0e57334602862f8"
+  },
+  "C:\\Users\\hp\\OneDrive\\Desktop\\awareness\\js\\ai\\bank_page_ensemble.js": {
+    "mtime": 1779733658.0,
+    "ast_hash": "49039a9bfbbfb0f129d396e7f18f7116",
+    "semantic_hash": "49039a9bfbbfb0f129d396e7f18f7116"
+  },
+  "C:\\Users\\hp\\OneDrive\\Desktop\\awareness\\js\\ai\\local_fallbacks.js": {
+    "mtime": 1779517882.0,
+    "ast_hash": "0ed9e61ac4d54d702365e3860a5630eb",
+    "semantic_hash": "0ed9e61ac4d54d702365e3860a5630eb"
+  },
+  "C:\\Users\\hp\\OneDrive\\Desktop\\awareness\\js\\ai\\logger.js": {
+    "mtime": 1779733646.0,
+    "ast_hash": "4e5495abc5d90c8ad0d9698e1006873e",
+    "semantic_hash": "4e5495abc5d90c8ad0d9698e1006873e"
+  },
+  "C:\\Users\\hp\\OneDrive\\Desktop\\awareness\\js\\ai\\prompts.js": {
+    "mtime": 1779543522.0,
+    "ast_hash": "ea69c7467dc09941504140bda822956f",
+    "semantic_hash": "ea69c7467dc09941504140bda822956f"
+  },
+  "C:\\Users\\hp\\OneDrive\\Desktop\\awareness\\js\\ai\\prompt_builders.js": {
+    "mtime": 1779540906.0,
+    "ast_hash": "e770e1fb713e50623026e4ead212c67b",
+    "semantic_hash": "e770e1fb713e50623026e4ead212c67b"
+  },
+  "C:\\Users\\hp\\OneDrive\\Desktop\\awareness\\js\\editor\\iframe_script.js": {
+    "mtime": 1779777016.0,
+    "ast_hash": "869b0b267340c013466fb96bd3d38d83",
+    "semantic_hash": "869b0b267340c013466fb96bd3d38d83"
+  },
+  "C:\\Users\\hp\\OneDrive\\Desktop\\awareness\\js\\newsletter\\bank_page.js": {
+    "mtime": 1780040699.723465,
+    "ast_hash": "23e72661980e5629f203d8042ddd289f",
+    "semantic_hash": "23e72661980e5629f203d8042ddd289f"
+  },
+  "C:\\Users\\hp\\OneDrive\\Desktop\\awareness\\js\\newsletter\\core_templates.js": {
+    "mtime": 1780046101.5283306,
+    "ast_hash": "e2d7f3e1ef4f4be5b1c84b0826b19704",
+    "semantic_hash": "e2d7f3e1ef4f4be5b1c84b0826b19704"
+  },
+  "C:\\Users\\hp\\OneDrive\\Desktop\\awareness\\js\\ui\\ai_experiment.js": {
+    "mtime": 1779517494.0,
+    "ast_hash": "0a3a5ee5b44ed7d8f30d8ccd431d9451",
+    "semantic_hash": "0a3a5ee5b44ed7d8f30d8ccd431d9451"
+  },
+  "C:\\Users\\hp\\OneDrive\\Desktop\\awareness\\js\\ui\\generate_pipeline.js": {
+    "mtime": 1779777830.0,
+    "ast_hash": "fa2e97d9d835ce00d29d382628061a3a",
+    "semantic_hash": "fa2e97d9d835ce00d29d382628061a3a"
+  },
+  "C:\\Users\\hp\\OneDrive\\Desktop\\awareness\\js\\ui\\sidebar_manager.js": {
+    "mtime": 1779541388.0,
+    "ast_hash": "df01afd8312d85ebd4a05314a4ea0d42",
+    "semantic_hash": "df01afd8312d85ebd4a05314a4ea0d42"
+  },
+  "C:\\Users\\hp\\OneDrive\\Desktop\\awareness\\js\\ui\\translation.js": {
+    "mtime": 1779513532.0,
+    "ast_hash": "5a9afa5a06f027fc8c7825bdb38558bb",
+    "semantic_hash": "5a9afa5a06f027fc8c7825bdb38558bb"
+  },
+  "C:\\Users\\hp\\OneDrive\\Desktop\\awareness\\builder.html": {
+    "mtime": 1779733892.0,
+    "ast_hash": "db34238d9f547f6d7aef0c1b94a9df7e",
+    "semantic_hash": "db34238d9f547f6d7aef0c1b94a9df7e"
+  },
+  "C:\\Users\\hp\\OneDrive\\Desktop\\awareness\\config.html": {
+    "mtime": 1780044961.5106864,
+    "ast_hash": "9caf2d1815d34b34a93c88f34a79b160",
+    "semantic_hash": "9caf2d1815d34b34a93c88f34a79b160"
+  },
+  "C:\\Users\\hp\\OneDrive\\Desktop\\awareness\\curation-lab.html": {
+    "mtime": 1780044968.4432962,
+    "ast_hash": "a574dee940fe0c5ba56d23e645fd35fe",
+    "semantic_hash": "a574dee940fe0c5ba56d23e645fd35fe"
+  },
+  "C:\\Users\\hp\\OneDrive\\Desktop\\awareness\\editor.html": {
+    "mtime": 1780044974.8493361,
+    "ast_hash": "3f83e2bad906e6ea3948f4559a8b43e6",
+    "semantic_hash": "3f83e2bad906e6ea3948f4559a8b43e6"
+  },
+  "C:\\Users\\hp\\OneDrive\\Desktop\\awareness\\health.html": {
+    "mtime": 1779734316.0,
+    "ast_hash": "1acc8e67023e86aa4b8bc704f97bc81e",
+    "semantic_hash": "1acc8e67023e86aa4b8bc704f97bc81e"
+  },
+  "C:\\Users\\hp\\OneDrive\\Desktop\\awareness\\index.html": {
+    "mtime": 1780044952.6401994,
+    "ast_hash": "ed3ded62a44909be689466b4616fb23f",
+    "semantic_hash": "ed3ded62a44909be689466b4616fb23f"
+  },
+  "C:\\Users\\hp\\OneDrive\\Desktop\\awareness\\keywords.html": {
+    "mtime": 1779733874.0,
+    "ast_hash": "4290ac3cc4f2074dda650d4582c7714e",
+    "semantic_hash": "4290ac3cc4f2074dda650d4582c7714e"
+  },
+  "C:\\Users\\hp\\OneDrive\\Desktop\\awareness\\preview.html": {
+    "mtime": 1780044980.6449313,
+    "ast_hash": "8f7e8e037fdd1fe438e032560ce3ae60",
+    "semantic_hash": "8f7e8e037fdd1fe438e032560ce3ae60"
+  },
+  "C:\\Users\\hp\\OneDrive\\Desktop\\awareness\\projects.html": {
+    "mtime": 1779733864.0,
+    "ast_hash": "30edde3d32cf5ca1e19c4974f3f38f4a",
+    "semantic_hash": "30edde3d32cf5ca1e19c4974f3f38f4a"
+  },
+  "C:\\Users\\hp\\OneDrive\\Desktop\\awareness\\send.html": {
+    "mtime": 1780044986.7612648,
+    "ast_hash": "523799724a4ada19becf32d5aa92dda5",
+    "semantic_hash": "523799724a4ada19becf32d5aa92dda5"
+  }
+}

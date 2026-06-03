@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+
+<html lang="en">
+
+<head>
+
+  <meta charset="UTF-8">
+
+  <meta name="viewport" content="width=device-width,initial-scale=1.0">
+
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https:; connect-src 'self' http://127.0.0.1:4175 https://api.anthropic.com https://api.openai.com https://api.allorigins.win https://corsproxy.io https://api.codetabs.com https://api.rss2json.com https:; frame-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'">
+
+  <meta name="referrer" content="strict-origin-when-cross-origin">
+
+  <title>Feed scoring - Awareness Newsletter</title>
+
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&family=DM+Serif+Display&display=swap" rel="stylesheet">
+
+  <style>
+
+    body{margin:0;background:#0a0a0a;color:#fff;font-family:'DM Sans',sans-serif}
+
+    .wrap{max-width:1180px;margin:0 auto;padding:1rem}
+
+    .btn{border:1px solid rgba(255,255,255,.2);background:transparent;color:#ddd;padding:.45rem .8rem;border-radius:6px;cursor:pointer}
+
+    .btn.primary{border-color:#d4a420;color:#d4a420}
+
+    .card{border:1px solid rgba(255,255,255,.12);border-radius:8px;background:#121212;padding:.8rem;margin-bottom:.7rem}
+
+    input{background:#191919;border:1px solid rgba(255,255,255,.16);color:#fff;padding:.45rem .55rem;border-radius:6px}
+
+    .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:.7rem}
+
+    .chips{display:flex;flex-wrap:wrap;gap:.35rem;margin-top:.5rem}
+
+    .chip{border:1px solid rgba(255,255,255,.16);border-radius:999px;padding:.22rem .5rem;font-size:.72rem}
+
+    .chip button{margin-left:.35rem;border:none;background:transparent;color:#ff7e7e;cursor:pointer}
+
+    .meta{font-size:.75rem;color:#b4b4b4;line-height:1.45}
+
+    .suggestions{margin-top:.45rem;display:flex;flex-wrap:wrap;gap:.3rem}
+
+    .sugg-btn{border:1px solid rgba(212,164,32,.3);background:rgba(212,164,32,.08);color:#d4a420;padding:.2rem .45rem;border-radius:999px;font-size:.66rem;cursor:pointer}
+
+    .toolbar{display:flex;gap:.45rem;flex-wrap:wrap;margin:.55rem 0}
+
+    .search-row{display:flex;gap:.4rem;margin:.45rem 0}
+
+    .tier-h{margin:.2rem 0 .5rem;font-size:1rem;font-weight:600}
+
+    .tier-critical{color:#ff9f6e}
+
+    .tier-context{color:#7ec8e3}
+
+    .tier-noise{color:#c4a8ff}
+
+    @media (max-width: 960px){ .grid{grid-template-columns:1fr} }
+
+  </style>
+
+</head>
+
+<body>
+
+  <div class="wrap">
+
+    <h1 style="font-family:'DM Serif Display',serif;margin:.2rem 0 .5rem">Feed keyword scoring</h1>
+
+    <p class="meta" style="margin:0 0 .85rem">
+
+      Same methodology as the production TPRM feed stack (weighted scoring + CVE id exclusion).
+
+      Each RSS item uses <strong>title + summary</strong> text. If it matches <code>CVE-YYYY-NNNN</code>, the item is dropped.
+
+      Otherwise: each <span class="tier-critical">critical</span> phrase +5, each <span class="tier-context">context</span> phrase +2,
+
+      each <span class="tier-noise">noise</span> phrase −3. Items with score <strong>≥ 5</strong> are kept.
+
+      Built-in defaults emphasize <strong>employee awareness</strong> on the critical list (phishing, scams, smishing, vishing, BEC, passwords/MFA, training)
+
+      and <strong>technical / vuln research</strong> on the noise list (CVE, CWE, CVSS, exploits, patches, PoCs, and similar).
+
+    </p>
+
+    <div style="display:flex;gap:.45rem;flex-wrap:wrap;margin-bottom:.7rem">
+
+      <button class="btn" onclick="App.RouterNav.goto('index.html#section-home',{ source:'keywords', clearProjectContext: true })">Home</button>
+
+      <button class="btn" onclick="App.RouterNav.goto('projects.html',{ source:'keywords' })">Projects</button>
+
+      <button class="btn" onclick="window.location.href='config.html'">Configuration</button>
+
+      <button class="btn primary" onclick="resetDefaults()">Reset to Defaults</button>
+
+      <button class="btn" style="color:#ff8f8f;border-color:rgba(255,126,126,.35)" onclick="deleteAllKeywords()">Delete All Keywords</button>
+
+    </div>
+
+    <div class="meta" id="summary"></div>
+
+    <div class="grid">
+
+      <div class="card">
+
+        <h3 class="tier-h tier-critical">Critical (+5 each)</h3>
+
+        <div style="display:flex;gap:.4rem">
+
+          <input id="critical-input" placeholder="e.g. ransomware" style="flex:1" aria-label="New critical keyword">
+
+          <button type="button" class="btn" aria-label="Add critical keyword" onclick="addCritical()">Add</button>
+
+        </div>
+
+        <div class="search-row">
+
+          <input id="critical-search" placeholder="Search critical list" style="flex:1" oninput="renderKeywords()" aria-label="Search critical keywords">
+
+        </div>
+
+        <div id="critical-suggestions" class="suggestions"></div>
+
+        <div class="toolbar">
+
+          <button type="button" class="btn" style="color:#ff8f8f;border-color:rgba(255,126,126,.35)" onclick="deleteAllCritical()">Delete All Critical</button>
+
+        </div>
+
+        <div id="critical-list" class="chips"></div>
+
+      </div>
+
+      <div class="card">
+
+        <h3 class="tier-h tier-context">Context (+2 each)</h3>
+
+        <div style="display:flex;gap:.4rem">
+
+          <input id="context-input" placeholder="e.g. vendor" style="flex:1" aria-label="New context keyword">
+
+          <button type="button" class="btn" aria-label="Add context keyword" onclick="addContext()">Add</button>
+
+        </div>
+
+        <div class="search-row">
+
+          <input id="context-search" placeholder="Search context list" style="flex:1" oninput="renderKeywords()" aria-label="Search context keywords">
+
+        </div>
+
+        <div id="context-suggestions" class="suggestions"></div>
+
+        <div class="toolbar">
+
+          <button type="button" class="btn" style="color:#ff8f8f;border-color:rgba(255,126,126,.35)" onclick="deleteAllContext()">Delete All Context</button>
+
+        </div>
+
+        <div id="context-list" class="chips"></div>
+
+      </div>
+
+      <div class="card">
+
+        <h3 class="tier-h tier-noise">Noise (−3 each)</h3>
+
+        <div style="display:flex;gap:.4rem">
+
+          <input id="noise-input" placeholder="e.g. tutorial" style="flex:1" aria-label="New noise keyword">
+
+          <button type="button" class="btn" aria-label="Add noise keyword" onclick="addNoise()">Add</button>
+
+        </div>
+
+        <div class="search-row">
+
+          <input id="noise-search" placeholder="Search noise list" style="flex:1" oninput="renderKeywords()" aria-label="Search noise keywords">
+
+        </div>
+
+        <div id="noise-suggestions" class="suggestions"></div>
+
+        <div class="toolbar">
+
+          <button type="button" class="btn" style="color:#ff8f8f;border-color:rgba(255,126,126,.35)" onclick="deleteAllNoise()">Delete All Noise</button>
+
+        </div>
+
+        <div id="noise-list" class="chips"></div>
+
+      </div>
+
+    </div>
+
+  </div>
+
+
+
+  <script src="js/router_nav.js"></script>
+
+  <script src="js/ux_contract.js"></script>
+
+  <script src="js/feed_scoring.js"></script>
+
+  <script src="js/keyword_store.js"></script>
+
+  <script>
+
+    App.UXContract?.init({ pageId: 'keywords', flowStepId: 'curate' });
+
+    function escSingleQuote(value) {
+
+      return String(value || '').replace(/'/g, "\\'");
+
+    }
+
+
+
+    function filteredList(list, query) {
+
+      const q = String(query || '').trim().toLowerCase();
+
+      if (!q) return list;
+
+      return list.filter(item => item.includes(q));
+
+    }
+
+
+
+    function renderSuggestions(listType, query, targetId, inputId) {
+
+      const holder = document.getElementById(targetId);
+
+      if (!holder) return;
+
+      const q = String(query || '').trim();
+
+      if (!q) {
+
+        holder.innerHTML = '';
+
+        return;
+
+      }
+
+      const suggestions = App.KeywordStore.suggestKeywords(listType, q, 8);
+
+      if (!suggestions.length) {
+
+        holder.innerHTML = '<span class="meta">No matches</span>';
+
+        return;
+
+      }
+
+      holder.innerHTML = suggestions
+
+        .map(k => `<button type="button" class="sugg-btn" onclick="applySuggestion('${inputId}','${escSingleQuote(k)}')">${k}</button>`)
+
+        .join('');
+
+    }
+
+
+
+    function renderKeywords() {
+
+      const critical = App.KeywordStore.getCriticalKeywords();
+
+      const context = App.KeywordStore.getContextKeywords();
+
+      const noise = App.KeywordStore.getNoiseKeywords();
+
+      const cq = document.getElementById('critical-search')?.value || '';
+
+      const ctxQ = document.getElementById('context-search')?.value || '';
+
+      const nq = document.getElementById('noise-search')?.value || '';
+
+      const critF = filteredList(critical, cq);
+
+      const ctxF = filteredList(context, ctxQ);
+
+      const noiseF = filteredList(noise, nq);
+
+      document.getElementById('summary').textContent =
+
+        `Critical: ${critical.length} · Context: ${context.length} · Noise: ${noise.length} · Include threshold: score ≥ ${App.FeedScoring.MIN_SCORE}`;
+
+      document.getElementById('critical-list').innerHTML = critF.map(k => `<span class="chip">${k}<button type="button" onclick="removeCritical('${escSingleQuote(k)}')">×</button></span>`).join('') || '<span class="meta">No critical terms match your search.</span>';
+
+      document.getElementById('context-list').innerHTML = ctxF.map(k => `<span class="chip">${k}<button type="button" onclick="removeContext('${escSingleQuote(k)}')">×</button></span>`).join('') || '<span class="meta">No context terms match your search.</span>';
+
+      document.getElementById('noise-list').innerHTML = noiseF.map(k => `<span class="chip">${k}<button type="button" onclick="removeNoise('${escSingleQuote(k)}')">×</button></span>`).join('') || '<span class="meta">No noise terms match your search.</span>';
+
+      renderSuggestions('critical', document.getElementById('critical-input')?.value || '', 'critical-suggestions', 'critical-input');
+
+      renderSuggestions('context', document.getElementById('context-input')?.value || '', 'context-suggestions', 'context-input');
+
+      renderSuggestions('noise', document.getElementById('noise-input')?.value || '', 'noise-suggestions', 'noise-input');
+
+    }
+
+
+
+    function applySuggestion(inputId, keyword) {
+
+      const input = document.getElementById(inputId);
+
+      if (!input) return;
+
+      input.value = keyword;
+
+      input.focus();
+
+      renderKeywords();
+
+    }
+
+
+
+    function addCritical(){ App.KeywordStore.addKeyword('critical', document.getElementById('critical-input').value); document.getElementById('critical-input').value=''; renderKeywords(); }
+
+    function addContext(){ App.KeywordStore.addKeyword('context', document.getElementById('context-input').value); document.getElementById('context-input').value=''; renderKeywords(); }
+
+    function addNoise(){ App.KeywordStore.addKeyword('noise', document.getElementById('noise-input').value); document.getElementById('noise-input').value=''; renderKeywords(); }
+
+    function removeCritical(k){ App.KeywordStore.removeKeyword('critical', k); renderKeywords(); }
+
+    function removeContext(k){ App.KeywordStore.removeKeyword('context', k); renderKeywords(); }
+
+    function removeNoise(k){ App.KeywordStore.removeKeyword('noise', k); renderKeywords(); }
+
+    function resetDefaults(){ if(!confirm('Reset all scoring lists to defaults?')) return; App.KeywordStore.resetDefaults(); renderKeywords(); }
+
+    function deleteAllCritical(){ if(!confirm('Delete all critical keywords?')) return; App.KeywordStore.clearKeywords('critical'); renderKeywords(); }
+
+    function deleteAllContext(){ if(!confirm('Delete all context keywords?')) return; App.KeywordStore.clearKeywords('context'); renderKeywords(); }
+
+    function deleteAllNoise(){ if(!confirm('Delete all noise keywords?')) return; App.KeywordStore.clearKeywords('noise'); renderKeywords(); }
+
+    function deleteAllKeywords(){ if(!confirm('Delete critical, context, and noise lists?')) return; App.KeywordStore.clearAllKeywords(); renderKeywords(); }
+
+    document.getElementById('critical-input').addEventListener('input', renderKeywords);
+
+    document.getElementById('context-input').addEventListener('input', renderKeywords);
+
+    document.getElementById('noise-input').addEventListener('input', renderKeywords);
+
+    renderKeywords();
+
+  </script>
+
+</body>
+
+</html>
+

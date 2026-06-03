@@ -1,0 +1,7 @@
+{
+  "$comment": "List the image filenames you've dropped into assets/image-library/ so the editor's Replace-image modal pre-loads them into the library. Filenames are relative to this folder. See README.md.",
+  "images": [
+    "imageassest.jpeg",
+    "imageassest2.jpeg"
+  ]
+}

@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1.0">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https:; connect-src 'self' http://127.0.0.1:4175 https://api.anthropic.com https://api.openai.com https://api.allorigins.win https://corsproxy.io https://api.codetabs.com https://api.rss2json.com https:; frame-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'">
+  <meta name="referrer" content="strict-origin-when-cross-origin">
+  <title>Editor - Awareness Newsletter</title>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&family=DM+Serif+Display&display=swap" rel="stylesheet">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js" integrity="sha384-3zSEDfvllQohrq0PHL1fOXJuC/jSOO34H46t6UQfobFOmxE5BpjjaIJY5F2/bMnU" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js" integrity="sha384-+mbV2IY1Zk/X1p/nWllGySJSUN8uMs+gUAN10Or95UBH0fpj6GfKgPmgC5EXieXG" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+  <style>
+    body{margin:0;background:#0a0a0a;color:#fff;font-family:'DM Sans',sans-serif}
+    .wrap{max-width:1100px;margin:0 auto;padding:1rem}
+    .btn{border:1px solid rgba(255,255,255,.2);background:transparent;color:#ddd;padding:.45rem .8rem;border-radius:6px;cursor:pointer;font-family:inherit;font-size:.82rem;font-weight:500;transition:background .15s,border-color .15s,color .15s}
+    .btn:hover{background:rgba(255,255,255,.06);border-color:rgba(255,255,255,.32);color:#fff}
+    .btn.primary{border-color:rgba(212,164,32,.55);color:#e8d49a;background:rgba(212,164,32,.08)}
+    .btn.primary:hover{background:rgba(212,164,32,.16);border-color:#d4a420;color:#fff}
+    .editor-toolbar{display:flex;flex-wrap:wrap;gap:.55rem;align-items:center;margin-bottom:.85rem}
+    .editor-toolbar__sep{width:1px;height:26px;background:rgba(255,255,255,.14);flex-shrink:0}
+    .editor-file-group{display:inline-flex;flex-wrap:wrap;border-radius:8px;border:1px solid rgba(255,255,255,.14);overflow:hidden;background:rgba(255,255,255,.04);box-shadow:0 1px 0 rgba(0,0,0,.35)}
+    .editor-file-group .btn{border-radius:0;border-width:0 1px 0 0;margin:0;padding:.52rem .95rem;font-size:.78rem;min-height:42px;display:inline-flex;align-items:center;justify-content:center}
+    .editor-file-group .btn:last-child{border-right:0}
+    .editor-file-group .btn.btn--file-primary{background:linear-gradient(180deg,rgba(212,164,32,.22),rgba(160,120,8,.18));color:#f5ecd8;border-right-color:rgba(255,255,255,.12);font-weight:600}
+    .editor-file-group .btn.btn--file-primary:hover{background:linear-gradient(180deg,rgba(212,164,32,.32),rgba(160,120,8,.26));color:#fff}
+    .preview{background:#111;border:1px solid rgba(255,255,255,.12);border-radius:8px;padding:.7rem}
+    .rollback-banner{
+      display:none;
+      margin:.2rem 0 .7rem;
+      padding:.6rem .75rem;
+      border-radius:8px;
+      border:1px solid rgba(234,187,93,.45);
+      background:rgba(234,187,93,.12);
+      color:#f2d79a;
+      font-size:.76rem;
+      line-height:1.45;
+    }
+    #nl-out{max-width:700px;margin:0 auto;background:#fff;color:#000}
+    .translate-modal{display:none;position:fixed;inset:0;z-index:250;background:rgba(0,0,0,.55);align-items:center;justify-content:center;backdrop-filter:blur(3px)}
+    .translate-modal.active{display:flex}
+    .translate-box{width:min(560px,calc(100vw - 2rem));background:#0f0f0f;border:1px solid rgba(212,164,32,.35);border-radius:10px;padding:1rem 1rem .9rem;box-shadow:0 20px 45px rgba(0,0,0,.45)}
+    .translate-title{font-size:.7rem;letter-spacing:.12em;text-transform:uppercase;color:#e8d49a;margin-bottom:.55rem}
+    .translate-meta{display:flex;justify-content:space-between;gap:.6rem;margin-bottom:.45rem;font-size:.72rem;color:#aaa}
+    .translate-bar{height:8px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);border-radius:999px;overflow:hidden}
+    .translate-bar-fill{height:100%;width:0%;background:linear-gradient(90deg,#C09010,#D4A420);transition:width .25s ease}
+    .translate-spinner{display:inline-block;width:10px;height:10px;border:2px solid rgba(212,164,32,.25);border-top-color:#D4A420;border-radius:50%;animation:translate-spin .8s linear infinite;margin-right:.5rem;vertical-align:-1px}
+    @keyframes translate-spin{to{transform:rotate(360deg)}}
+    .project-name-arming #project-title{border-color:#D4A420;background:#1c1c1c;box-shadow:0 0 0 3px rgba(212,164,32,.18)}
+    .project-name-hint{display:none;font-size:.72rem;color:#e8d49a;margin-left:.5rem;white-space:nowrap}
+    .project-name-arming .project-name-hint{display:inline}
+    @media (max-width: 1024px){
+      .wrap{max-width:100%;padding:.8rem}
+      .btn{min-height:40px}
+    }
+    @media (max-width: 640px){
+      .wrap{padding:.6rem}
+      .editor-toolbar > .btn{flex:1;min-width:120px}
+      .preview{padding:.45rem}
+      #nl-out{max-width:100%}
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1 style="font-family:'DM Serif Display',serif;margin:.2rem 0 .8rem">Editor</h1>
+    <div id="ai-rollback-banner" class="rollback-banner" role="status" aria-live="polite"></div>
+    <div id="editor-version-row" class="editor-version-row" style="display:none;flex-wrap:wrap;gap:.5rem;align-items:center;margin:0 0 .85rem;padding:.55rem .65rem;border:1px solid rgba(255,255,255,.12);border-radius:8px;background:rgba(255,255,255,.03)">
+      <label for="editor-project-version-select" style="font-size:.75rem;color:#aaa;white-space:nowrap">Saved versions</label>
+      <select id="editor-project-version-select" style="flex:1;min-width:160px;max-width:100%;background:#191919;border:1px solid rgba(255,255,255,.16);color:#fff;padding:.4rem .55rem;border-radius:6px"></select>
+      <button type="button" class="btn" onclick="App.UI.editorLoadSelectedProjectVersion()">Load</button>
+      <button type="button" class="btn primary" onclick="App.UI.editorRestoreSelectedVersionAsLatest()">Save as new latest</button>
+    </div>
+    <div id="editor-project-name-row" class="editor-project-name-row" style="display:flex;gap:.55rem;align-items:center;margin:0 0 .65rem;padding:.55rem .65rem;border:1px solid rgba(255,255,255,.12);border-radius:8px;background:rgba(255,255,255,.03)">
+      <label for="project-title" style="font-size:.75rem;color:#aaa;white-space:nowrap;font-weight:500">Project name</label>
+      <input id="project-title" type="text" placeholder="Type a name and press Enter to save to Projects" style="flex:1;min-width:200px;background:#191919;border:1px solid rgba(255,255,255,.16);color:#fff;padding:.45rem .65rem;border-radius:6px;font-family:inherit;font-size:.85rem;transition:border-color .15s,box-shadow .15s,background .15s">
+      <span class="project-name-hint" aria-live="polite">Press Enter to save</span>
+      <span id="project-version-label" style="font-size:.72rem;color:#888;white-space:nowrap"></span>
+    </div>
+    <div class="editor-toolbar">
+      <button type="button" class="btn" onclick="App.RouterNav.goto('send.html', App.RouterNav.getHandoff() || {})">Send</button>
+      <button type="button" class="btn primary" onclick="App.UI.openEditor()">Open Newsletter Editor</button>
+      <button type="button" class="btn" onclick="App.UI.autoTranslateNewsletter()" title="Generate the current template in every supported language from the English source">Translate all languages</button>
+      <span class="editor-toolbar__sep" aria-hidden="true"></span>
+      <div class="editor-file-group" role="group" aria-label="Save and download">
+        <button type="button" class="btn btn--file-primary" onclick="App.UI.saveProjectVersion()" title="Save the full project (all language variants). If the newsletter editor is open, the canvas is synced first.">Save</button>
+        <button type="button" class="btn" onclick="App.UI.downloadCurrentHTML()" title="Download the selected language as one HTML file">HTML</button>
+        <button type="button" class="btn" onclick="void App.UI.downloadCurrentEml()" title="Download a send-ready .eml — double-click it to open in Outlook with images inline, add recipients and Send (no relay needed)">EML</button>
+        <button type="button" class="btn" onclick="void App.UI.downloadCurrentMsg()" title="Download a send-ready Outlook .msg — double-click it to open in Outlook with images inline, add recipients and Send (no relay needed)">MSG</button>
+        <button type="button" class="btn" onclick="App.UI.downloadAllHTML()" title="Download ZIP with html/ and svg/ folders for every language">All files</button>
+      </div>
+    </div>
+    <div class="preview">
+      <div style="display:flex;gap:.4rem;justify-content:center;flex-wrap:wrap;margin-bottom:.6rem">
+        <select id="preview-lang" onchange="App.UI.switchPreviewLanguage(this.value)"></select>
+        <select id="wf-next-state"></select>
+        <span id="wf-state-chip" style="padding:.3rem .6rem;border:1px solid #555;border-radius:999px">Draft</span>
+        <button class="btn" onclick="App.UI.transitionWorkflow()">Move</button>
+      </div>
+      <div class="nl" id="nl-out"></div>
+    </div>
+  </div>
+
+  <div id="translate-modal" class="translate-modal" aria-live="polite" role="dialog" aria-label="Translating newsletter">
+    <div class="translate-box">
+      <div class="translate-title"><span class="translate-spinner" aria-hidden="true"></span>Translating all languages</div>
+      <div class="translate-meta">
+        <span id="translate-step-label">Preparing...</span>
+        <span id="translate-step-count">0 / 0</span>
+      </div>
+      <div class="translate-bar">
+        <div id="translate-bar-fill" class="translate-bar-fill"></div>
+      </div>
+    </div>
+  </div>
+
+  <input id="cfg-freq" value="Weekly" hidden><input id="cfg-soc" value="SOC-support@abc.com" hidden>
+  <input id="cfg-max" value="2" hidden>
+  <input id="meta-title" value="Security Awareness Bulletin" hidden><input id="meta-issue-date" hidden><input id="meta-status" value="draft" hidden>
+  <input id="feat-poster" type="checkbox" checked hidden><input id="feat-links" type="checkbox" checked hidden><input id="feat-qr" type="checkbox" checked hidden><input id="feat-illus" type="checkbox" checked hidden>
+  <input id="feat-ai" type="checkbox" checked hidden><input id="ai-provider" value="claude" hidden><input id="ai-key" hidden>
+  <div id="saved-drafts-list" hidden></div><div id="delivery-log-list" hidden></div><div id="db-stats" hidden></div><div id="feed-status-area" hidden></div><div id="feed-sources-dashboard" hidden></div><div id="sb-feeds-list" hidden></div>
+
+  <script src="js/utils.js"></script>
+  <script src="js/db.js"></script>
+  <script src="js/router_nav.js"></script>
+  <script src="js/ux_contract.js"></script>
+  <script src="js/feed_scoring.js"></script>
+  <script src="js/keyword_store.js"></script>
+  <script src="js/project_store.js"></script>
+  <script src="js/responsive_layout.js"></script>
+  <script src="js/rss_fetcher.js"></script>
+  <script src="js/ai/prompts.js"></script>
+  <script src="js/ai/local_fallbacks.js"></script>
+  <script src="js/ai/logger.js"></script>
+  <script src="js/ai_summarizer.js"></script>
+  <script src="js/ai/prompt_builders.js"></script>
+  <script src="js/ai/bank_page_ensemble.js"></script>
+  <script src="js/graphics_engine.js"></script>
+  <script src="assets/template_assets.js"></script>
+  <script src="js/newsletter_builder.js"></script>
+  <script src="js/newsletter/bank_page.js"></script>
+  <script src="js/newsletter/core_templates.js"></script>
+  <script src="js/translation_metrics.js"></script>
+  <script src="js/delivery_helpers.js"></script>
+  <script src="js/msg_writer.js"></script>
+  <script src="js/ui_controller.js"></script>
+  <script src="js/ui/translation.js"></script>
+  <script src="js/ui/ai_experiment.js"></script>
+  <script src="js/ui/generate_pipeline.js"></script>
+  <script src="js/ui/sidebar_manager.js"></script>
+  <script src="assets/image-library/library.js"></script>
+  <script src="js/editor/iframe_script.js"></script>
+  <script src="js/editor.js"></script>
+  <script>
+    App.UXContract?.init({ pageId: 'editor', flowStepId: 'edit', guard: 'workspace-required' });
+    if (App.ResponsiveLayout?.init) App.ResponsiveLayout.init();
+    App.UI.init();
+    // Auto-save on editor landing — focus the existing Project name field. As
+    // soon as the user types a name and confirms it (Enter or blur with a
+    // non-empty value), saveProjectVersion() fires once and the project is
+    // persisted into Projects. After that, projectId is set on App.UI._state
+    // so subsequent renames don't auto-trigger (use the Save button instead).
+    queueMicrotask(() => {
+      try {
+        const handoffPid = App.RouterNav?.getHandoff?.()?.projectId;
+        const statePid = App.UI?._state?.activeProjectId;
+        const hasProjectId = !!(handoffPid || statePid);
+        const hasWorkspace = !!localStorage.getItem('awareness_newsletter_workspace_v1');
+        if (!hasWorkspace || hasProjectId) return;
+        armProjectNameAutoSave();
+      } catch (err) {
+        console.warn('[editor auto-save] skipped:', err);
+      }
+    });
+
+    function armProjectNameAutoSave() {
+      const row = document.getElementById('editor-project-name-row');
+      const input = document.getElementById('project-title');
+      if (!input) return;
+      if (row) row.classList.add('project-name-arming');
+      setTimeout(() => { try { input.focus(); input.select(); } catch (_) {} }, 60);
+
+      let saving = false;
+      const cleanup = () => {
+        input.removeEventListener('blur', tryTrigger);
+        input.removeEventListener('keydown', keyHandler);
+        if (row) row.classList.remove('project-name-arming');
+      };
+      async function tryTrigger() {
+        if (saving) return;
+        const name = (input.value || '').trim();
+        if (!name) return; // empty blur leaves the listener armed
+        saving = true;
+        cleanup();
+        try {
+          if (typeof App.UI?.saveProjectVersion === 'function') {
+            await App.UI.saveProjectVersion();
+          }
+        } catch (err) {
+          console.warn('[editor auto-save] failed:', err);
+          // Re-arm so the user can retry (e.g. AI key fix in another tab).
+          saving = false;
+          if (row) row.classList.add('project-name-arming');
+          input.addEventListener('blur', tryTrigger);
+          input.addEventListener('keydown', keyHandler);
+        }
+      }
+      function keyHandler(e) {
+        if (e.key === 'Enter') { e.preventDefault(); tryTrigger(); }
+      }
+      input.addEventListener('blur', tryTrigger);
+      input.addEventListener('keydown', keyHandler);
+    }
+  </script>
+</body>
+</html>

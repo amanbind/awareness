@@ -1,0 +1,88 @@
+services:
+  awareness:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile
+    image: awareness:latest
+    container_name: awareness
+    restart: unless-stopped
+    # Don't expose port 8080 - only accessible via Caddy internally
+    expose:
+      - "80"
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://127.0.0.1/health.html"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 5s
+    networks:
+      - default
+    environment:
+      # Optional: set NODE_ENV or app-specific vars
+      NODE_ENV: production
+
+  redis:
+    image: redis:7-alpine
+    container_name: redis
+    restart: unless-stopped
+    expose:
+      - "6379"
+    volumes:
+    - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+    networks:
+      - default
+
+
+  oauth2-proxy:
+    image: quay.io/oauth2-proxy/oauth2-proxy:v7.6.0
+    env_file:
+      - .env.sso
+    container_name: oauth2-proxy
+    restart: unless-stopped
+    environment:
+      - OAUTH2_PROXY_HTTP_ADDRESS=0.0.0.0:4180
+    expose:
+      - "4180"
+    networks:
+      - default
+    depends_on:
+      redis:
+        condition: service_healthy
+
+
+
+  caddy:
+    image: caddy:2-alpine
+    container_name: caddy
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    env_file:
+      - .env.sso
+    volumes:
+      - caddy_data:/data
+      - caddy_config:/config
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+    command: ["caddy", "run", "--config", "/etc/caddy/Caddyfile"]
+    networks:
+      - default
+    depends_on:
+      awareness:
+        condition: service_healthy
+      oauth2-proxy:
+        condition: service_started
+
+volumes:
+  caddy_data:
+  caddy_config:
+  redis_data:
+
+networks:
+  default:
+    driver: bridge

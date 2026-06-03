@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1.0">
+  <title>QR Placeholder Demo</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+  <style>
+    :root { color-scheme: dark; }
+    body {
+      margin: 0;
+      padding: 32px;
+      background: #1a1a1a;
+      font-family: 'DM Sans', Arial, sans-serif;
+      color: #e5e5e5;
+    }
+    h1 { color: #D4A420; font-size: 22px; margin: 0 0 6px; letter-spacing: 0.04em; }
+    p.intro { color: #aaa; margin: 0 0 24px; font-size: 14px; }
+    label { font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; color: #D4A420; }
+    input[type=url] {
+      width: 100%; max-width: 540px;
+      padding: 10px 14px; margin-top: 8px; margin-bottom: 28px;
+      background: #0A0A0A; border: 1px solid #8A7010; color: #fff;
+      font-family: inherit; font-size: 14px;
+    }
+    .panes {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 24px;
+      max-width: 1000px;
+    }
+    .pane h2 {
+      font-size: 12px; letter-spacing: 0.2em; text-transform: uppercase;
+      color: #D4A420; margin: 0 0 12px;
+    }
+    .pane .caption {
+      font-size: 12px; color: #888; margin: 12px 0 0; line-height: 1.5;
+    }
+    .footer-mock {
+      background: #0A0A0A; border-top: 1px solid #5C4A10;
+      padding: 24px 28px;
+    }
+    .footer-row { display: flex; gap: 16px; align-items: flex-start; }
+    .portal-info { flex: 1; }
+    .portal-kicker {
+      font-size: 9px; letter-spacing: 0.2em; text-transform: uppercase;
+      color: #D4A420; font-weight: bold;
+    }
+    .portal-name {
+      display: block; font-size: 14px; font-weight: bold; color: #fff;
+      text-decoration: none; margin-top: 12px;
+    }
+    .portal-blurb { font-size: 11px; color: #bbb; line-height: 1.5; margin-top: 12px; }
+    .portal-cta {
+      display: inline-block; font-size: 11px; color: #D4A420;
+      border: 1px solid #8A7010; padding: 6px 12px; text-decoration: none;
+      margin-top: 12px;
+    }
+    .qr-cell {
+      width: 160px; text-align: center;
+    }
+    .qr-frame {
+      border: 2px solid #C09010; background: #fff; padding: 4px;
+      display: inline-block;
+    }
+    .qr-frame img, .qr-frame canvas { display: block; }
+    .qr-label {
+      margin-top: 6px; font-size: 9px; color: #555;
+      letter-spacing: 0.08em; text-transform: uppercase;
+    }
+    .scan-target {
+      margin-top: 18px; padding: 10px 14px; background: #0A0A0A;
+      border-left: 3px solid #D4A420; font-size: 12px; color: #ccc;
+      word-break: break-all;
+    }
+    .scan-target b { color: #D4A420; }
+    .badge {
+      display: inline-block; font-size: 10px; padding: 2px 8px;
+      border-radius: 3px; margin-left: 8px; vertical-align: middle;
+      letter-spacing: 0.06em; text-transform: uppercase;
+    }
+    .badge.static { background: #5c4a10; color: #ffd478; }
+    .badge.dynamic { background: #1a4a1a; color: #78ff8e; }
+  </style>
+</head>
+<body>
+  <h1>QR Placeholder Demo</h1>
+  <p class="intro">
+    Type a Portal URL below. The left pane (in-app preview) <b>never</b> changes — it always
+    shows the static placeholder. The right pane (exported HTML) re-encodes the QR to whatever
+    you typed, which is what the recipient actually scans.
+  </p>
+
+  <label for="portal">Portal URL (config &rarr; Portal URL)</label>
+  <input id="portal" type="url" value="https://security.abc.com/awareness" placeholder="https://...">
+
+  <div class="panes">
+    <!-- ── PREVIEW PANE ── -->
+    <section class="pane">
+      <h2>Preview pane <span class="badge static">Static</span></h2>
+      <div class="footer-mock">
+        <div class="footer-row">
+          <div class="portal-info">
+            <span class="portal-kicker">Security Awareness Portal</span>
+            <a class="portal-name" href="#">ABC Corp Security Awareness Portal</a>
+            <div class="portal-blurb">Training modules, policies, and past bulletins.</div>
+            <a class="portal-cta" href="#">Visit Portal</a>
+          </div>
+          <div class="qr-cell">
+            <div class="qr-frame" id="qr-preview"></div>
+            <div class="qr-label">Scan for Portal</div>
+          </div>
+        </div>
+      </div>
+      <div class="scan-target">
+        Scans to: <b id="scan-preview">(static placeholder — does not change)</b>
+      </div>
+      <p class="caption">
+        This is what you see in <code>index.html</code> while building the newsletter.
+        The same image is reused regardless of config values.
+      </p>
+    </section>
+
+    <!-- ── EXPORT PANE ── -->
+    <section class="pane">
+      <h2>Exported HTML <span class="badge dynamic">Live QR</span></h2>
+      <div class="footer-mock">
+        <div class="footer-row">
+          <div class="portal-info">
+            <span class="portal-kicker">Security Awareness Portal</span>
+            <a class="portal-name" href="#" id="link-export">ABC Corp Security Awareness Portal</a>
+            <div class="portal-blurb">Training modules, policies, and past bulletins.</div>
+            <a class="portal-cta" href="#" id="cta-export">Visit Portal</a>
+          </div>
+          <div class="qr-cell">
+            <div class="qr-frame" id="qr-export"></div>
+            <div class="qr-label">Scan for Portal</div>
+          </div>
+        </div>
+      </div>
+      <div class="scan-target">
+        Scans to: <b id="scan-export">https://security.abc.com/awareness</b>
+      </div>
+      <p class="caption">
+        This is the file you'd actually email/download (<code>Download HTML</code>,
+        <code>Download all</code>, Send flow). The QR re-encodes the Portal URL from config
+        every time the export runs.
+      </p>
+    </section>
+  </div>
+
+  <script>
+    // ── Static placeholder: a QR encoding the literal text "PREVIEW PLACEHOLDER" so it
+    //    visually looks like a real QR but never points anywhere meaningful.
+    function renderPlaceholder() {
+      const holder = document.getElementById('qr-preview');
+      holder.innerHTML = '';
+      new QRCode(holder, {
+        text: 'PREVIEW PLACEHOLDER',
+        width: 144, height: 144,
+        colorDark: '#000', colorLight: '#fff',
+        correctLevel: QRCode.CorrectLevel.H
+      });
+      // qrcodejs paints both a canvas and an img — keep just the img and convert it to a
+      // static src so it can't be re-encoded later
+      setTimeout(() => {
+        const img = holder.querySelector('img');
+        const canvas = holder.querySelector('canvas');
+        if (canvas) canvas.remove();
+        if (img) { img.width = 144; img.height = 144; img.alt = 'QR code (preview placeholder)'; }
+      }, 20);
+    }
+
+    function renderExport(url) {
+      const holder = document.getElementById('qr-export');
+      holder.innerHTML = '';
+      new QRCode(holder, {
+        text: url, width: 144, height: 144,
+        colorDark: '#000', colorLight: '#fff',
+        correctLevel: QRCode.CorrectLevel.H
+      });
+      document.getElementById('scan-export').textContent = url;
+      document.getElementById('link-export').href = url;
+      document.getElementById('cta-export').href = url;
+    }
+
+    function normalizeWebUrl(raw) {
+      const s = String(raw || '').trim();
+      if (!s) return '';
+      const lower = s.toLowerCase();
+      if (lower.startsWith('mailto:') || lower.startsWith('tel:')) return s;
+      if (/^[a-z][a-z0-9+.-]*:/i.test(s)) return s;
+      if (s.startsWith('//')) return `https:${s}`;
+      return `https://${s.replace(/^\/+/, '')}`;
+    }
+
+    const input = document.getElementById('portal');
+    function refresh() {
+      const url = normalizeWebUrl(input.value) || 'mailto:security@example.com';
+      renderExport(url);
+    }
+    input.addEventListener('input', refresh);
+
+    renderPlaceholder();
+    refresh();
+  </script>
+</body>
+</html>

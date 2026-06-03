@@ -1,0 +1,88 @@
+localhost {
+    tls internal
+    encode gzip zstd
+
+    @hidden {
+        path /tests/* /scripts/* /docs/* /node_modules/*
+        path /ensemble-logs/* /playwright-report/* /test-results/* /deploy/*
+        path /package.json /package-lock.json /eslint.config.js
+        path /playwright.config.js /baseline-critical-path-audit-results.json
+        path /.*
+    }
+    handle @hidden {
+        respond 404
+    }
+
+    # oauth2-proxy — no auth
+    handle /oauth2/* {
+        reverse_proxy oauth2-proxy:4180 {
+            header_up Host              {http.request.host}
+            header_up X-Forwarded-Proto {http.request.scheme}
+            header_up X-Forwarded-For   {http.request.remote.host}
+            header_up X-Real-IP         {http.request.remote.host}
+        }
+    }
+
+    # Health check — no auth
+    handle /health.html {
+        reverse_proxy awareness:80 {
+            header_up Host              {http.request.host}
+            header_up X-Real-IP         {http.request.remote.host}
+            header_up X-Forwarded-For   {http.request.remote.host}
+            header_up X-Forwarded-Proto {http.request.scheme}
+        }
+    }
+
+    # Everything else: require authentication
+    handle {
+        forward_auth oauth2-proxy:4180 {
+            uri /oauth2/auth
+            copy_headers {
+                X-Auth-Request-User
+                X-Auth-Request-Email
+                X-Auth-Request-Access-Token
+                X-Auth-Request-Preferred-Username
+                Set-Cookie
+            }
+            @error status 401 403
+
+            handle_response @error {
+
+                redir * /oauth2/sign_in?rd={http.request.uri} 302
+            }
+        }
+
+        reverse_proxy awareness:80 {
+            header_up Host                        {http.request.host}
+            header_up X-Real-IP                   {http.request.remote.host}
+            header_up X-Forwarded-For             {http.request.remote.host}
+            header_up X-Forwarded-Proto           {http.request.scheme}
+            header_up X-Auth-Request-User  {http.request.header.X-Auth-Request-User}
+            header_up X-Auth-Request-Email {http.request.header.X-Auth-Request-Email}
+        }
+    }
+
+
+    # Security headers
+    header {
+
+        Strict-Transport-Security  "max-age=31536000; includeSubDomains"
+        X-Content-Type-Options     "nosniff"
+        X-Frame-Options            "DENY"
+        Referrer-Policy            "strict-origin-when-cross-origin"
+        Permissions-Policy         "geolocation=(), microphone=(), camera=(), payment=(), usb=()"
+        Cross-Origin-Opener-Policy "same-origin"
+        Cross-Origin-Resource-Policy "same-origin"
+        Content-Security-Policy    "default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https:; connect-src 'self' https://api.anthropic.com https://api.openai.com https://api.allorigins.win https://corsproxy.io https://api.codetabs.com https://api.rss2json.com https:; frame-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'"
+        -Server
+    }
+
+    @html   path *.html
+    header @html  Cache-Control "public, max-age=0, must-revalidate"
+
+    @code   path *.js *.css
+    header @code  Cache-Control "public, max-age=86400, must-revalidate"
+
+    @assets path *.jpg *.jpeg *.png *.gif *.webp *.ico *.svg *.woff *.woff2 *.ttf *.eot
+    header @assets Cache-Control "public, max-age=604800"
+}

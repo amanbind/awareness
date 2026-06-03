@@ -1,0 +1,132 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# Awareness Newsletter — nginx production config (example)
+#
+# Replace placeholders:
+#   __DOMAIN__     → your domain (e.g. awareness.example.com)
+#   __WEB_ROOT__   → absolute path to the dist/ folder you rsync'd to the server
+#                    (e.g. /var/www/awareness)
+#   __TLS_CERT__   → path to fullchain.pem
+#   __TLS_KEY__    → path to privkey.pem
+#
+# Validate before reload:   nginx -t
+# Reload:                   systemctl reload nginx   (or)   nginx -s reload
+# Security grade check:     https://securityheaders.com/?q=__DOMAIN__
+# ─────────────────────────────────────────────────────────────────────────────
+
+# HTTP → HTTPS redirect.
+server {
+    listen 80;
+    listen [::]:80;
+    server_name __DOMAIN__;
+
+    # Let ACME HTTP-01 challenges through if you're using certbot --webroot
+    # or similar. Everything else is upgraded.
+    location ^~ /.well-known/acme-challenge/ {
+        root __WEB_ROOT__;
+        try_files $uri =404;
+    }
+
+    location / {
+        return 301 https://$host$request_uri;
+    }
+}
+
+server {
+    listen 443 ssl http2;
+    listen [::]:443 ssl http2;
+    server_name __DOMAIN__;
+
+    root __WEB_ROOT__;
+    index index.html;
+
+    # ── TLS ──────────────────────────────────────────────────────────────────
+    ssl_certificate     __TLS_CERT__;
+    ssl_certificate_key __TLS_KEY__;
+    ssl_protocols       TLSv1.2 TLSv1.3;
+    ssl_ciphers         ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305;
+    ssl_prefer_server_ciphers on;
+    ssl_session_cache shared:SSL:10m;
+    ssl_session_timeout 1d;
+    ssl_session_tickets off;
+
+    # ── Security headers ─────────────────────────────────────────────────────
+    # HSTS — opt-in to "long-lived" once you're confident about subdomains.
+    add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
+    add_header X-Content-Type-Options "nosniff" always;
+    add_header X-Frame-Options "DENY" always;
+    add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+    add_header Permissions-Policy "geolocation=(), microphone=(), camera=(), payment=(), usb=()" always;
+    add_header Cross-Origin-Opener-Policy "same-origin" always;
+    add_header Cross-Origin-Resource-Policy "same-origin" always;
+
+    # Pragmatic CSP — matches the meta tag in the HTML files.
+    # 'unsafe-inline' for scripts is required by the 94 inline event handlers
+    # in the app today; see docs/SECURITY.md for the deferred strict-CSP work.
+    add_header Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https:; connect-src 'self' https://api.anthropic.com https://api.openai.com https://api.allorigins.win https://corsproxy.io https://api.codetabs.com https://api.rss2json.com https:; frame-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'" always;
+
+    # ── Compression ──────────────────────────────────────────────────────────
+    gzip on;
+    gzip_vary on;
+    gzip_min_length 1024;
+    gzip_proxied any;
+    gzip_comp_level 6;
+    gzip_types text/plain text/css text/javascript application/javascript application/json image/svg+xml application/xml application/xml+rss;
+    # If your nginx has ngx_brotli, uncomment:
+    # brotli on;
+    # brotli_comp_level 5;
+    # brotli_types text/plain text/css text/javascript application/javascript application/json image/svg+xml;
+
+    # ── Body size — no large uploads in this app ─────────────────────────────
+    client_max_body_size 1m;
+
+    # ── Legacy redirect ──────────────────────────────────────────────────────
+    location = /builder.html { return 301 /index.html#section-home; }
+
+    # ── Health endpoint (don't pollute access log) ───────────────────────────
+    location = /health.html {
+        access_log off;
+        add_header Cache-Control "no-store" always;
+    }
+
+    # ── Defense-in-depth deny rules ─────────────────────────────────────────
+    # build-dist.mjs already excludes these, but block them here too in case
+    # someone rsyncs the full repo by mistake.
+    location ~ /\.                       { deny all; }
+    location ~* ^/(tests|scripts|docs|node_modules|ensemble-logs|playwright-report|test-results|deploy)/ {
+        deny all;
+    }
+    location = /package.json            { deny all; }
+    location = /package-lock.json       { deny all; }
+    location = /eslint.config.js        { deny all; }
+    location = /playwright.config.js    { deny all; }
+    location = /baseline-critical-path-audit-results.json { deny all; }
+
+    # ── Cache-control by file type ──────────────────────────────────────────
+    # HTML: always revalidate so a fresh deploy is picked up immediately.
+    location ~* \.html?$ {
+        add_header Cache-Control "public, max-age=0, must-revalidate" always;
+        # Re-apply security headers (add_header doesn't inherit across blocks).
+        add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
+        add_header X-Content-Type-Options "nosniff" always;
+        add_header X-Frame-Options "DENY" always;
+        add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+        add_header Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob: https:; connect-src 'self' https://api.anthropic.com https://api.openai.com https://api.allorigins.win https://corsproxy.io https://api.codetabs.com https://api.rss2json.com https:; frame-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'" always;
+        try_files $uri /index.html;
+    }
+
+    # JS / CSS — long cache, content-addressed by hash would be even better but
+    # we don't fingerprint filenames in a no-build app, so use moderate cache.
+    location ~* \.(js|css)$ {
+        add_header Cache-Control "public, max-age=86400, must-revalidate" always;
+    }
+
+    # Static assets — weekly.
+    location ~* \.(jpg|jpeg|png|gif|webp|ico|svg|woff|woff2|ttf|eot)$ {
+        add_header Cache-Control "public, max-age=604800" always;
+    }
+
+    # Multi-page fallback — preserves hash-based deep links.
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
+}

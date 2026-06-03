@@ -1,0 +1,4 @@
+# Cloudflare Pages — copy this to `_redirects` at the dist/ root before deploy.
+
+/builder.html  /index.html#section-home  301
+/*             /index.html               200

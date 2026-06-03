@@ -1,0 +1,848 @@
+================================================================================
+EDITOR FEATURES — PORTING GUIDE
+================================================================================
+Audience: another branch that needs the same Editor side-panel + Undo/Redo +
+Regenerate behaviour as this branch.
+Scope: everything wired into editor.html / js/editor.js / js/editor/iframe_script.js
+and the supporting AI ensemble in js/ai_summarizer.js.
+
+All file:line citations are against THIS branch and may drift in yours; treat
+them as anchors, not literal coordinates. If unsure, grep for the function name.
+
+================================================================================
+0. ARCHITECTURE AT A GLANCE
+================================================================================
+
+The editor is a self-contained module on `window.App.Editor`. It injects its
+own CSS + HTML into the host page (editor.html) at script-init time and exposes
+a public API for the rest of the app to drive it (open/save/close/etc.).
+
+Three runtime layers:
+
+  1. Parent page (editor.html, the static shell with toolbar above the iframe)
+  2. Editor modal (App.Editor — injected DOM, manages the side panels + iframe)
+  3. Iframe (the actual editable newsletter, runs an injected script extracted
+     into js/editor/iframe_script.js as App.EditorIframeScript.fn)
+
+Parent ↔ Iframe communication is exclusively postMessage with envelope
+`{ _nlEd: true, cmd|type, ... }`. Both sides reject messages without that flag.
+
+Script load order on every editor-consuming page (editor.html shows the canonical
+order; any branch that loads these out of order breaks the seam tests):
+
+    js/utils.js
+    js/db.js
+    js/router_nav.js
+    js/ux_contract.js
+    ... (rss + ai modules) ...
+    js/ai/prompts.js
+    js/ai/local_fallbacks.js
+    js/ai/logger.js
+    js/ai_summarizer.js
+    js/ai/prompt_builders.js
+    js/ai/bank_page_ensemble.js
+    js/newsletter_builder.js
+    js/newsletter/bank_page.js
+    js/newsletter/core_templates.js
+    js/translation_metrics.js
+    js/ui_controller.js
+    js/ui/translation.js
+    js/ui/ai_experiment.js
+    js/ui/generate_pipeline.js
+    js/ui/sidebar_manager.js
+    js/editor/iframe_script.js     ← MUST load before js/editor.js
+    js/editor.js
+
+The reason `editor/iframe_script.js` loads first: editor.js reads
+`window.App.EditorIframeScript.fn` at IIFE time and serialises it into the
+iframe's srcdoc via `.toString()`. If it isn't defined yet, the iframe runs
+an empty no-op stub.
+
+================================================================================
+1. FILES TO ADD / MODIFY
+================================================================================
+
+NEW (or full replacement):
+
+  js/editor.js                       ~1418 lines — parent-side controller
+  js/editor/iframe_script.js         ~838 lines  — iframe-side editing engine
+  editor.html                        ~128 lines  — outer shell page
+
+MODIFIED:
+
+  js/ai_summarizer.js                add regenerateSelection() (~60 lines).
+                                     Look for the exported surface near the
+                                     bottom — `regenerateSelection` is listed
+                                     alongside fillNewsletterTextSlots,
+                                     validateArticleCoherence, etc.
+
+If your branch has a seam-contract test
+(tests/unit/seam-contracts.test.js), it asserts these public surfaces:
+  - App.EditorIframeScript.fn is a serialisable function with the expected
+    iframe-side markers ("data-nl-sel", "applySelectionTexts", etc.)
+  - App.AISummarizer.regenerateSelection is exported and length-checks
+  - regenerateSelection passes target language into the AI system prompt
+  - regenerateSelection runs an ensemble and picks the best when one attempt
+    is malformed
+
+================================================================================
+2. EDITOR TOPBAR — UNDO / REDO / RESET / SAVE / EXPORT / CLOSE / DEVICE PILLS
+================================================================================
+
+Location in HTML (built in editor.js, _buildHtml(), within `.ed-topbar`):
+
+  <span class="ed-brand" id="editor-lang-label">Newsletter Studio</span>
+  <div class="ed-device-pills">
+    Full / 700px / Mobile pills → App.Editor._device(this, '700px')
+  </div>
+  <button id="ed-undo-btn" onclick="App.Editor._undo()" disabled>↩ Undo</button>
+  <button id="ed-redo-btn" onclick="App.Editor._redo()" disabled>↪ Redo</button>
+  <button onclick="App.Editor._reset()">Reset</button>
+  <span class="ed-status" id="editor-status">Ready</span>
+  <button class="ed-tbtn--preview" onclick="App.Editor._preview()">Preview</button>
+  <div class="ed-tbtn-group">
+    Save | Single file | All files
+  </div>
+  <button class="ed-tbtn--close" onclick="App.Editor.close()">×</button>
+
+--------------------------------------------------------------------------------
+2.1 UNDO/REDO — STATE MACHINE
+--------------------------------------------------------------------------------
+
+Module-scope state (top of App.Editor IIFE):
+
+    let _undoStack = [], _redoStack = [];
+    let _baseline = '';           // last committed iframe body.innerHTML
+    let _textEditActive = false;  // true between first 'update' and 'editDone'
+
+Core invariant: `_baseline` is always the LAST KNOWN GOOD state. The undo
+stack holds previous baselines; the redo stack holds states we've stepped
+backwards out of.
+
+Functions:
+
+  _commit()       — Push current `_baseline` onto undoStack, refresh _baseline
+                    to iframe.body.innerHTML, clear redoStack, cap undo at 40.
+                    Idempotent — no-op if nothing actually changed.
+
+  _resetBaseline()— Snapshot current iframe state as new baseline WITHOUT
+                    pushing. Used on open() and _reset() to seed.
+
+  _pushUndo()     — Alias for _commit(). Older call sites used this name;
+                    kept for compatibility.
+
+  _updateHistoryButtons() — toggles disabled state on #ed-undo-btn / #ed-redo-btn
+
+  _restoreIframeBody(html) — sets iframe.body.innerHTML = html, then posts
+                    'rescanAfterRestore' and 'clearRegenPending' so the iframe
+                    re-measures height and drops stale selection markers.
+
+  _undo() — if mid-typing (_textEditActive), fold the typing session into the
+            stack first via _commit(); pop one entry, push current onto redo,
+            restore, set _dirty=true, deselect, status="Undo applied".
+
+  _redo() — symmetric.
+
+Typing-session batching (critical detail):
+
+  - Iframe posts 'update' with `fromTyping: true` on every keystroke.
+  - Parent's _msgHandler sets `_textEditActive = true` and does NOT commit.
+  - When user clicks away (iframe stopEdit fires 'editDone'), parent calls
+    _commit() — folding the whole typing burst into one undo step.
+  - Undo while still typing: _undo() force-folds first so user doesn't lose
+    their edit to a stale baseline.
+
+Keyboard shortcuts (parent-side, `_keyHandler`):
+
+  - Ctrl/Cmd + Z  → _undo()
+  - Ctrl/Cmd + Shift + Z  → _redo()
+  - Ctrl/Cmd + Y  → _redo()
+  - Listener is attached on `open()` with capture=true so it pre-empts other
+    document handlers, but ONLY fires when the modal is `.active` — iframe
+    typing keeps its own focus.
+
+Commit triggers (in _msgHandler):
+
+  - 'editDone'   → _commit()  (typing session ended)
+  - 'update' with no `fromTyping` (slider, color picker, etc.) → _commit()
+  - 'deleted', 'moved', 'added' → _commit()
+  - In `_prop`, `_propSize`, `_toggle`, `_propHex`, `_setWidth`, `_setPadding`,
+    `_applyPreset` (any parent-initiated mutation): _pushUndo() BEFORE
+    posting the mutation to the iframe.
+
+================================================================================
+3. LEFT SIDE PANEL — ACTIONS / SECTIONS / + ADD TABS
+================================================================================
+
+The left nav (`.ed-nav`, 260px wide on desktop) has three tabs:
+
+    [ Actions ]  [ Sections ]  [ + Add ]
+
+Each tab is a `<button class="ed-nav-tab">` calling
+`App.Editor._navTab(this, 'actions'|'sections'|'add')`. The matching pane
+`<div id="ed-nav-actions">` etc. gets `.active` toggled.
+
+--------------------------------------------------------------------------------
+3.1 ACTIONS PANE — STRUCTURE
+--------------------------------------------------------------------------------
+
+The pane has TWO visual states:
+
+  IDLE  (`#ed-nav-actions-idle`)   — shown when nothing is selected
+  BODY  (`#ed-nav-actions-body`)   — shown when at least one element is selected
+
+Idle state shows a hint:
+    "Click any element in the newsletter to act on it."
+    + a `<ul>` listing the available actions.
+
+Body state contains:
+    - Multi-select banner (visible only if `multiCount > 1`)
+        <div id="ed-nav-multisel-banner">
+          <strong id="ed-nav-multisel-count">0</strong> selected
+        </div>
+    - Element tag label (`#ed-nav-actions-tag`) — e.g. "DIV × 3"
+    - The action grid (`.ed-action-grid`, 2-column CSS grid):
+
+        Up               Down
+        Drag             Duplicate
+        Lock                              (grid-column 1 / -1, full width)
+        ↻ Regenerate     ↻ All languages
+        Remove                            (grid-column 1 / -1, danger style)
+        Remove in all languages           (full width, "all-langs" danger style)
+
+    - The Regenerate panel (`#ed-regen-panel`, hidden by default):
+        <p id="ed-regen-mode-note"></p>
+        <textarea id="ed-regen-instruction" rows=3
+                  placeholder="Optional instruction…"></textarea>
+        <p id="ed-regen-status"></p>
+        <div class="ed-regen-actions">
+            Cancel        Regenerate →   (#ed-regen-run)
+        </div>
+
+--------------------------------------------------------------------------------
+3.2 ACTION BUTTONS — WIRING
+--------------------------------------------------------------------------------
+
+Every button calls a thin wrapper in App.Editor that just postMessages to the
+iframe. The iframe owns the DOM mutation logic. Wrapper list (editor.js):
+
+    _moveUp()      → _post('moveUp', null)
+    _moveDown()    → _post('moveDown', null)
+    _startDrag()   → _post('enableDrag', null)
+    _duplicate()   → _post('duplicate', null)
+    _lockToggle()  → _post('lockToggle', null)
+    _delete()      → _post('delete', null)
+    _regenOpen(mode)        → opens panel (see §4)
+    deleteSelectedInAllLanguages() → batches across language variants (see §5)
+
+Iframe handlers (iframe_script.js, in the postMessage switch):
+
+    case 'moveUp': doMove('up')
+    case 'moveDown': doMove('down')
+    case 'duplicate': doDuplicate()
+    case 'lockToggle': doLockToggle()
+    case 'delete': doDelete()
+    case 'enableDrag': sets _dragEl + entourage, posts 'dragReady'
+
+`doMove`, `doDuplicate`, `doDelete` all use `collectBlockTargets()` which:
+  - Walks _sel + every element in _selSet
+  - For each, climbs via findBulletWrapper() to the right structural ancestor
+    (e.g. TR for a bullet row, so siblings live at the correct level)
+  - Filters out locked elements (data-nl-lock="1")
+  - Sorts in document order
+  - Returns the de-duped target array
+
+Multi-select model (iframe_script.js):
+  - `_sel`     = primary selection
+  - `_selSet`  = Set of all selected elements (includes primary)
+  - Click without shift  → single-select (clears _selSet, sets _sel)
+  - Click with shift     → additive toggle (doSelect(el, true))
+  - Visual contract: both single and multi look identical (gold outline + tint
+    background) so the user can trust "anything gold-boxed will be acted on".
+    Multi-count is shown in the right panel banner.
+
+--------------------------------------------------------------------------------
+3.3 AUTO-SWITCH TO ACTIONS TAB ON FIRST SELECTION
+--------------------------------------------------------------------------------
+
+When the user selects something for the first time after a deselect, the left
+nav auto-switches to the Actions tab so the buttons are in view immediately.
+
+Gate: `_navAutoSwitchedForSelection` (boolean). Set to true after the first
+auto-switch in a selection session; reset to false in `_showIdle()`. Once true,
+subsequent selections respect whatever tab the user manually picked.
+
+Implementation: in `_updatePanel`:
+
+    if (!_navAutoSwitchedForSelection) {
+      const activeNavTab = document.querySelector('.ed-nav-tab.active');
+      const isOnActions = activeNavTab &&
+        activeNavTab.textContent.trim().toLowerCase() === 'actions';
+      if (!isOnActions) {
+        const actionsTab = Array.from(document.querySelectorAll('.ed-nav-tab'))
+          .find(b => b.textContent.trim().toLowerCase() === 'actions');
+        if (actionsTab) actionsTab.click();
+      }
+      _navAutoSwitchedForSelection = true;
+    }
+
+--------------------------------------------------------------------------------
+3.4 SECTIONS TAB
+--------------------------------------------------------------------------------
+
+`#ed-nav-sections` pane lists every nav anchor in the loaded newsletter.
+Built by `_buildNav(f)` after iframe load:
+
+  - Email-safe templates use `data-nl-nav` attributes directly (no CSS classes).
+  - Legacy screen-only templates use CSS classes prefixed with `nl-` — the
+    builder mirrors them onto data-nl-nav for consistent click handling.
+  - Each item is `<div class="ed-nav-item" onclick="App.Editor._scrollTo(key)">`
+  - `_scrollTo(key)` queries `[data-nl-nav="<key>"]` in the iframe and calls
+    scrollIntoView({behavior:'smooth', block:'center'}).
+
+--------------------------------------------------------------------------------
+3.5 + ADD TAB
+--------------------------------------------------------------------------------
+
+Two grids: Elements (8 presets) and Sections (6 presets). Defined as constants
+at the top of editor.js:
+
+    const ELEMS = [
+      { icon:'H', label:'Heading', html:'<div ...>New Heading</div>' },
+      { icon:'¶', label:'Paragraph', html:'<p ...>Click to edit...</p>' },
+      { icon:'→', label:'Button', html:'<a href="#" ...>Click Here</a>' },
+      { icon:'—', label:'Divider', html:'<hr ...>' },
+      { icon:'⚠', label:'Alert Box', html:'...' },
+      { icon:'■', label:'Dark Box', html:'...' },
+      { icon:'•', label:'Bullet List', html:'<ul>...</ul>' },
+      { icon:'🖼', label:'Image', html:'...placeholder...' }
+    ];
+
+    const SECTIONS = [
+      Dark Header / Light Card / Gold Strip / Two Columns / Red Warning /
+      Quote Block
+    ];
+
+`_addEl(idx)` posts {cmd:'addEl', v: ELEMS[idx].html} → iframe `doAddEl(html)`
+inserts AFTER the current selection (or at end of root if no selection).
+
+================================================================================
+4. REGENERATE BUTTON — FULL FLOW
+================================================================================
+
+Two buttons live in the Actions grid:
+
+  ↻ Regenerate    → mode='current' (this language only)
+  ↻ All languages → mode='all'     (regen in English, fan out via translation)
+
+Both call `App.Editor._regenOpen(mode)` which opens the inline `#ed-regen-panel`
+with an instruction textarea, a status line, and Cancel + Regenerate buttons.
+
+Module-scope state:
+
+    let _regenInFlight = false;
+    let _regenResolve = null;          // promise resolver for selectionTexts
+    let _regenAppliedResolve = null;   // promise resolver for selectionApplied
+    let _regenMode = 'current';        // 'current' | 'all'
+
+Disabled gate (`_regenAvailable()`): requires an AI API key in the global
+#ai-key field. Title text on the button switches to "Add an AI API key in
+Configuration to enable Regenerate" when unavailable.
+
+--------------------------------------------------------------------------------
+4.1 _regenRun() — STEP-BY-STEP
+--------------------------------------------------------------------------------
+
+Step 1 — Collect selection texts from iframe:
+
+    _post('getSelectionTexts', null);
+    // 1.5s timeout — resolves with [] on timeout
+    // Iframe responds 'selectionTexts' with items: [{idx,text,path,relPath,color}]
+    // Iframe also tags each leaf with data-nl-regen-pending="<idx>" so step 3
+    //   can find them again without DOM path math.
+    //
+    // IMPORTANT: iframe's findRegenTarget walks DOWN to the deepest text-
+    //   bearing leaf, unlike findBulletWrapper which climbs UP. This avoids
+    //   wiping the gold-dot sibling cell when textContent is replaced.
+
+Step 2 — AI call:
+
+    const targetLang = isAllMode ? 'en' : curLangId;
+    newItems = await App.AISummarizer.regenerateSelection({
+      texts, articles, instruction,
+      provider, apiKey,
+      mode: curationMode,
+      attempts: 3,
+      languageId: targetLang,
+      languageLabel: targetLabel
+    });
+
+  - `articles` is read from `App.UI._state.newsletterWorkspace.articles` —
+    the original article objects that were used to build the newsletter, NOT
+    the live home-page selection. This is why Regenerate works even on a
+    branch where the home-page selection has been lost across navigation.
+  - AI-logging build context (`AILogger.beginBuild({templateId})`) is opened
+    around the call so every ensemble attempt gets mirrored to
+    `templates/<id>/ensemble-logs/<session>/`.
+
+Step 3 — Apply:
+
+  Current-language only:
+    _pushUndo();                              // snapshot pre-regen
+    _post('applySelectionTexts', { items: newItems.map((t,i)=>({idx:i,text:t})) });
+    // 2s timeout — iframe responds 'selectionApplied'
+    _dirty = true;
+    await flushOpenEditorToWorkspace();       // persists current language
+
+  All-languages:
+    If currently in EN: apply to iframe + save EN immediately.
+    If currently in non-EN: walk newItems[i] / collected[i].path/relPath, run
+      Utils.updateNewsletterNodeTextByMirrorPath(enHtml, path, relPath, newText, 5)
+      to surgically update the stored EN variant by mirror path (DOM structure
+      mirrors across language variants).
+    Then:
+      await App.UITranslation.translateWorkspace({ overwrite: true });
+    Reload iframe from the freshly translated current-language variant.
+
+Cleanup: `_regenCancel()` clears the panel, sets status='', posts
+'clearRegenPending' to the iframe.
+
+--------------------------------------------------------------------------------
+4.2 IFRAME-SIDE — getSelectionTexts / applySelectionTexts
+--------------------------------------------------------------------------------
+
+Implemented in js/editor/iframe_script.js, inside the postMessage switch.
+
+  case 'getSelectionTexts':
+    - For each selected element:
+        - call findRegenTarget(start) — descends into deepest text leaf,
+          but skips gold-dot bullet TDs (special-case for bullet rows).
+        - dedupe by leaf
+        - sort in document order
+    - For each leaf:
+        - tag with data-nl-regen-pending="<idx>"
+        - compute DOM path (so cross-language regen can find the same node)
+        - snapshot effective color (via getComputedStyle) — needed because
+          replacing textContent wipes inner <span>s that may carry the colour.
+    - Post 'selectionTexts' with items array.
+
+  case 'applySelectionTexts':
+    - For each {idx, text} in incoming:
+        - el = querySelector('[data-nl-regen-pending="<idx>"]')
+        - preserveColor = el.style.color || getComputedStyle(el).color
+        - el.textContent = text
+        - if preserveColor and !el.style.color, force el.style.color back on
+        - remove data-nl-regen-pending
+    - Cleanup any leftover markers (belt-and-braces).
+    - reportHeight()
+    - Post 'selectionApplied' with applied count.
+
+  case 'clearRegenPending':
+    - Remove every data-nl-regen-pending marker. Called on cancel/deselect.
+
+================================================================================
+5. ADDITIONAL ACTION: REMOVE IN ALL LANGUAGES
+================================================================================
+
+Button: `<button class="ed-act2 ed-act2--all-langs"
+        onclick="void App.Editor.deleteSelectedInAllLanguages()">Remove in all
+        languages</button>`
+
+Flow (js/editor.js):
+
+  1. _getSelectedBodyChildPaths() — iframe responds 'domPaths' with
+     items: [{path, relPath, locked}] for every selected (unlocked) element.
+  2. Fallback: if no items, try single-element _getSelectedBodyChildPath().
+  3. Sort paths DESCENDING by DOM index — earlier deletions don't shift the
+     later paths.
+  4. confirm() dialog ("Remove N blocks from every language version?…").
+  5. For each item, call _opts.onDeleteInAllLanguages({path, relPath}) — this
+     callback is provided by App.UI when it opens the editor; it iterates
+     workspace.variants[*].html, applies the deletion via the mirror-path
+     util, and returns {ok, html, css, updated} for the current language so
+     the iframe can reload.
+  6. After loop: reload iframe from last result, status = "Removed N/M
+     block(s) from K language(s)".
+
+================================================================================
+6. RIGHT-SIDE PROPERTIES PANEL
+================================================================================
+
+`#ed-panel` (328px wide on desktop, 280 on tablet). Two states:
+
+  IDLE (`#ed-panel-idle`)   — placeholder when nothing selected
+  PROPS (`#ed-panel-props`) — shown when something selected
+
+Props block contains, in order:
+
+  - Multi-select banner (matches the one in left nav)
+  - Element tag (`#ed-el-tag`) and text preview (`#ed-el-preview`)
+  - Edit Text textarea (`#prop-text-area`) — live oninput → App.Editor._setText
+  - Translate-to-all-languages button (`#ed-text-sync-btn`) — pushes the
+    edited text into every other language variant via
+    App.UI.syncNewsletterElementTextToAllLanguages({path, relPath, text, sourceLangId})
+  - Text Color (color picker + hex input)
+  - Background (color picker + hex input + clear ×)
+  - Font Size (range slider + number input)
+  - Width / Padding (number inputs in px)
+  - Style: B / I / U toggles
+  - Alignment: L / C / R
+  - Quick Presets: Heading / Body / CTA / Accent
+  - Deselect element button
+
+All inputs route through `_prop`, `_propHex`, `_propSize`, `_toggle`,
+`_setText`, `_setWidth`, `_setPadding`, `_applyPreset` — each does
+`_pushUndo()` first, then posts the mutation to the iframe.
+
+================================================================================
+7. FLOATING TEXT TOOLBAR (`#ed-floatbar`)
+================================================================================
+
+Anchored above (or below) the current selection in the canvas. Six buttons:
+B / I / U / L / C / R. Position calculation in `_updatePanel` clamps to the
+`.ed-canvas-scroll` rect so it never escapes the canvas area into the page
+chrome above. Activated when getProps returns rectTop/rectLeft; hidden on
+mobile via media query.
+
+================================================================================
+8. AI: regenerateSelection() IN js/ai_summarizer.js
+================================================================================
+
+Signature (around line 1111):
+
+    async function regenerateSelection({
+      texts,                  // string[] — current text of each selected item
+      articles = [],          // article objects from the workspace
+      instruction = '',       // optional user instruction
+      provider,               // 'claude' | 'openai'
+      apiKey,
+      mode = 'balanced',      // curation mode
+      attempts = 3,
+      languageId = 'en',
+      languageLabel = 'English'
+    } = {}) { ... }
+
+Behaviour:
+  - Throws on empty texts or missing apiKey.
+  - Compacts up to 6 articles (title clipped 140, summary clipped 320).
+  - Builds a system+user prompt asking the model to rewrite each text item in
+    the target language, returning JSON `{items: ["...", "...", ...]}` with
+    exactly `texts.length` strings.
+  - Runs `attempts` parallel callTemplateSlotsAI calls.
+  - Promise.allSettled — keeps only fulfilled results whose item count matches.
+  - Scores each candidate (scoreRegenResponse) and picks the highest.
+  - Throws "All N AI attempts failed or returned mismatched counts (…)" if
+    every attempt fails — caller (editor) surfaces this via _regenSetStatus.
+
+Don't bypass — port `regenerateSelection` verbatim along with its helpers
+(`scoreRegenResponse`, the per-language system prompt, the ensemble loop).
+The seam test pins this contract.
+
+================================================================================
+9. PUBLIC API SURFACE (App.Editor)
+================================================================================
+
+Exported at the bottom of editor.js:
+
+    return {
+      open, save, saveToWorkspace, saveToWorkspaceAndProject,
+      downloadCurrentLanguage, downloadAllLanguages, close,
+      deleteSelectedInAllLanguages, flushOpenEditorToWorkspace,
+      _syncTextToOtherLanguages,
+      // Internal — called from onclick attrs in injected HTML
+      _prop, _propHex, _propSize, _toggle, _setText, _deselect,
+      _delete, _moveUp, _moveDown, _startDrag, _duplicate, _lockToggle,
+      _applyPreset,
+      _setWidth, _setPadding,
+      _addEl, _addSec,
+      _device, _navTab, _scrollTo,
+      _undo, _redo, _reset, _preview,
+      _regenOpen, _regenCancel, _regenRun
+    };
+
+`open(opts)` is the main entrypoint. App.UI.openEditor() builds these opts:
+
+    {
+      langId, langLabel,          // current preview language
+      html, css,                  // workspace.variants[langId].{html,css}
+      portalUrl,                  // for QR code in iframe
+      templateId,                 // for AI-log build context
+      onSave({html, css, langId}),
+      onGetResetData() → {html, css},
+      onDeleteInAllLanguages({path, relPath}) → {ok, html, css, updated},
+      onClose()
+    }
+
+================================================================================
+10. CSS / VISUAL CONTRACT
+================================================================================
+
+All editor CSS is in the `CSS` constant at the top of editor.js — injected once
+at IIFE init. Key visual rules to preserve:
+
+  - Editor modal z-index = 1200 (above App.UXContract .ux-shell at 999)
+  - Selection: 2.5px solid #D4A420 outline + 0.08 alpha gold background
+  - Hover: 1px solid rgba(255,255,255,.32), no gold, no dashes
+  - Locked: ::after "LOCKED" badge top-right, gold background
+  - Drag ghost: opacity .35, pointer-events none
+  - Iframe canvas frame: bg #C5BEAF, max-width 700px (Email pill default)
+  - Action grid: 2 cols, gap .6rem
+  - .ed-act2 buttons: 2.6rem min height, gold-on-hover
+  - .ed-act2--regen: gold-tinted background even when not hovered
+  - .ed-act2--danger: red tint
+  - .ed-act2--wide / .ed-act2--all-langs: grid-column 1 / -1
+  - .ed-regen-panel: gold border + tint, hidden by default via [hidden]
+  - Responsive: nav shrinks at 1024px, hides at 760px and floatbar disabled
+
+================================================================================
+11. PORTING CHECKLIST (in order)
+================================================================================
+
+[ ] 1. Copy js/editor/iframe_script.js verbatim. Make sure it's loaded BEFORE
+       js/editor.js on every page that opens the editor.
+[ ] 2. Copy js/editor.js verbatim.
+[ ] 3. Confirm editor.html (or your target page) has the toolbar wired to
+       App.UI.openEditor / App.UI.saveProjectVersion etc. — the actual modal
+       is injected by editor.js, but the outer-page Save/Single-file/All-files
+       buttons live in editor.html.
+[ ] 4. Add regenerateSelection() + scoreRegenResponse() helper to
+       js/ai_summarizer.js. Export it on App.AISummarizer.
+[ ] 5. Verify App.UI._state.newsletterWorkspace.articles is populated after
+       a build — Regenerate depends on it. (In this branch it's set in
+       js/ui/generate_pipeline.js buildAndPreview around line 162.)
+[ ] 6. Verify Utils.updateNewsletterNodeTextByMirrorPath exists in
+       js/utils.js — required for cross-language regen and "Remove in all
+       languages". Otherwise non-EN regen will fail with "Could not locate
+       the matching English elements".
+[ ] 7. Verify App.UITranslation.translateWorkspace({overwrite:true}) exists
+       in js/ui/translation.js — required for the "All languages" regen mode.
+[ ] 8. Wire App.UI.syncNewsletterElementTextToAllLanguages — used by the
+       "Translate to all languages" button in the right properties panel.
+[ ] 9. Wire App.UI.openEditor opts (especially onDeleteInAllLanguages).
+[ ] 10. Run the seam tests: `node --test tests/unit/seam-contracts.test.js`.
+        These pin the editor + regen surfaces; if any fail, the iframe script
+        or AI export has drifted.
+[ ] 11. Manual QA in browser:
+        - Open editor; verify Undo/Redo enable as you make changes
+        - Ctrl+Z / Ctrl+Shift+Z keyboard shortcuts
+        - Type in an element, click away, Undo — should roll back the whole
+          typing burst as one step
+        - Select an element → Actions tab auto-shows the buttons
+        - Shift-click multi-select → multi-banner shows count → Move/Delete
+          act on every selected
+        - Regenerate (current language) on a bullet — text replaces, gold
+          dot survives
+        - Regenerate (all languages) from a non-EN preview — EN updates,
+          translations re-run, current preview reloads with new content
+        - "Remove in all languages" prunes the block from every variant
+
+================================================================================
+12. GOTCHAS / NON-OBVIOUS DETAILS
+================================================================================
+
+- `_baseline` MUST be the LAST committed state, not the current one. A common
+  refactor mistake is to "always store current" which breaks undo: you end up
+  pushing the same state onto the stack as the iframe holds, so Undo restores
+  nothing visible.
+
+- During typing, do NOT _commit() on every keystroke. The `fromTyping` flag
+  in the 'update' message + `_textEditActive` boolean is the whole mechanism.
+
+- The iframe script is serialised via `.toString()` and embedded in srcdoc.
+  This means: NO references to outer-scope variables, NO closures over parent
+  state, NO imports. Everything talks via postMessage. If you need a new
+  iframe feature, add a `case` in the iframe's switch and a parent-side
+  sender in editor.js.
+
+- Bullet rows: deletion uses findBulletWrapper (climbs UP to TR) to remove
+  the whole row including the gold dot. Regenerate uses findRegenTarget
+  (descends DOWN to the text TD) so replacing textContent doesn't wipe the
+  gold dot. Don't unify these two — they're inverse on purpose.
+
+- The colour preservation in applySelectionTexts is critical. Many template
+  bullets carry their colour via an inner `<span style="color:#…">`. When
+  you do `el.textContent = newText`, the span is destroyed. The code
+  snapshots the computed colour, replaces text, then force-sets
+  el.style.color so the new text inherits the right colour without the span.
+
+- regenerateSelection's `articles` argument is READ FROM THE WORKSPACE
+  (App.UI._state.newsletterWorkspace.articles), not from the home page
+  selection. That snapshot is taken at build time in buildAndPreview. If
+  you change that capture point, Regenerate's article context changes.
+
+- The auto-switch to Actions tab happens ONLY on the first selection after
+  a deselect. Don't make it run on every selection — it pulls the user out
+  of whatever tab they manually chose.
+
+- editor.html does NOT call App.Editor.open() — App.UI.openEditor() does,
+  via the "Open Newsletter Editor" button. App.Editor itself just exposes
+  the modal and the API; the host page wires up the trigger.
+
+================================================================================
+END OF FILE
+================================================================================
+
+================================================================================
+APPENDIX A. TEMPLATE PICKER ON index.html — HOW IT'S ORGANISED
+================================================================================
+Scope: the "Choose Template" section on the home/builder page (index.html).
+Covers DOM structure, the data source, the Ready / Beta split, rendering,
+preview wiring, and the CSS hooks that drive the layout.
+
+--------------------------------------------------------------------------------
+A.1 PAGE LOCATION
+--------------------------------------------------------------------------------
+The picker is "SECTION 1: Template Picker" on index.html, immediately under the
+breadcrumb bar and before the "Select Articles" section.
+
+  index.html:973-987   — picker markup (header + Ready grid + Beta <details>)
+  index.html:1055-1070 — full-screen template-preview modal (`#tpl-preview-modal`)
+  index.html:1156-1216 — IIFE that builds the cards from the template catalog
+  index.html:1142-1144 — script order that loads the catalog before init
+
+--------------------------------------------------------------------------------
+A.2 DOM STRUCTURE
+--------------------------------------------------------------------------------
+Two stacked groups inside one section:
+
+  <div class="sec-hd">
+    <h2>Choose <em>Template</em></h2>
+    <p>14 layouts inspired by JPMorgan, Goldman Sachs, Microsoft, Deloitte &amp; more</p>
+  </div>
+
+  <!-- Tier 1: Ready — always expanded -->
+  <div class="fmt-tier-label">
+    Ready <span class="fmt-tier-count" id="fmt-ready-count"></span>
+  </div>
+  <div class="fmt-grid" id="fmt-grid"><!-- cards injected by JS --></div>
+
+  <!-- Tier 2: Beta — collapsible -->
+  <details class="fmt-beta-group" id="fmt-beta-group">
+    <summary>Beta · In Development<span class="fmt-tier-count" id="fmt-beta-count"></span></summary>
+    <div class="fmt-grid" id="fmt-grid-beta"><!-- cards injected by JS --></div>
+  </details>
+
+Each rendered card is:
+
+  <div class="fmt-card [sel]" data-fmt="<id>" onclick="App.UI.pickFormat(this,'<id>')">
+    <div class="fmt-thumb">${App.Graphics.FORMAT_THUMBS[id] || .poster}</div>
+    <div class="fmt-name">${name}</div>
+    <div class="fmt-desc">${desc}</div>
+    <button class="fmt-preview-btn"
+            onclick="event.stopPropagation();
+                     App.UI.previewTemplate('<id>','<name>')">👁 Preview</button>
+  </div>
+
+The `.sel` class is the highlighted "currently selected" state — the IIFE seeds
+it on the `poster` card so the page boots with a valid default selection.
+
+--------------------------------------------------------------------------------
+A.3 DATA SOURCE — App.NewsletterBuilder.getTemplateCatalog()
+--------------------------------------------------------------------------------
+The picker is fully data-driven. The card list comes from the in-memory
+template catalog defined in js/newsletter_builder.js (TEMPLATE_CATALOG, around
+line 132). Each entry carries `{ id, name, tags, channels, visualProfile,
+recommended, status }`. The picker only reads `id`, `name`, `recommended`
+(used as the `desc`), and `status`.
+
+Readiness tiering (js/newsletter_builder.js:160-163):
+
+    const READY_TEMPLATE_IDS = new Set(['poster', 'bankpage1_static', 'bankpage1_dynamic']);
+    for (const t of TEMPLATE_CATALOG) {
+      t.status = READY_TEMPLATE_IDS.has(t.id) ? 'ready' : 'beta';
+    }
+
+Promoting a template to Ready = add its id to that Set. No HTML change needed.
+
+Per the project's CLAUDE.md note, templates self-register from sibling files
+(`js/newsletter/bank_page.js`, `js/newsletter/core_templates.js`) into the
+registry owned by `js/newsletter_builder.js`. index.html's script block at
+lines 1142-1144 loads them in that order so the catalog is fully populated
+before the init IIFE runs.
+
+--------------------------------------------------------------------------------
+A.4 BUILD/RENDER STEP (init IIFE, index.html:1156-1216)
+--------------------------------------------------------------------------------
+After App.UXContract.init, the IIFE:
+
+  1. Grabs both grid containers (`#fmt-grid`, `#fmt-grid-beta`).
+  2. Maps the catalog into a render shape:
+       { id, name, desc: t.recommended || '', status, sel: t.id === 'poster' }
+     `poster` is hard-coded as the default-selected card.
+  3. Defines a single `renderCard(f)` template literal (the card markup shown
+     in §A.2). Thumbnails come from `App.Graphics.FORMAT_THUMBS[id]`, with a
+     fallback to `FORMAT_THUMBS.poster` for any id that lacks a thumb.
+  4. Partitions:
+       ready = catalog.filter(f => f.status === 'ready')
+       beta  = catalog.filter(f => f.status !== 'ready')
+  5. Renders each list into its grid with `.map(renderCard).join('')`.
+  6. Updates the two count chips (`#fmt-ready-count`, `#fmt-beta-count`) with
+     `(N)` so the section headers show how many cards live in each tier.
+
+After the picker is built the IIFE then runs ResponsiveLayout.init,
+App.UI.init, and the hash/handoff routing — the picker is wired before the
+rest of the page state.
+
+--------------------------------------------------------------------------------
+A.5 INTERACTION CONTRACTS
+--------------------------------------------------------------------------------
+- Card click → `App.UI.pickFormat(cardEl, id)`: toggles `.sel` on the clicked
+  card and updates the workspace's chosen template id.
+- "👁 Preview" button → `App.UI.previewTemplate(id, name)`: opens the full-
+  screen `#tpl-preview-modal` (index.html:1055-1070), which renders the
+  template into `#tpl-preview-out` and offers "✓ Use This Template" (calls
+  `App.UI.selectFromPreview()`) and "← Back to Builder".
+  `event.stopPropagation()` on the button prevents the parent card's click
+  handler from also firing.
+- The Beta group is a native `<details>` element — open/closed state is the
+  browser's, no JS toggle. CSS rotates the `::before` chevron when `[open]`
+  (index.html:217-231).
+
+--------------------------------------------------------------------------------
+A.6 LAYOUT / RESPONSIVE
+--------------------------------------------------------------------------------
+- `.fmt-grid` is a 4-column CSS grid by default (index.html:210).
+- At narrower breakpoints it collapses: `repeat(2, 1fr)` (index.html:841) and
+  `1fr 1fr` (index.html:845).
+- `.fmt-tier-label` is the small all-caps "Ready"/"Beta" header above each
+  grid; `.fmt-tier-count` is the muted `(N)` chip beside it.
+- `.fmt-beta-group > summary` is styled as a tappable header with a
+  chevron — `::-webkit-details-marker { display:none }` hides the native
+  triangle so the custom chevron is the only affordance.
+- Card visuals: 1px translucent border, gold border + glow on `:hover`,
+  gold checkmark badge (`::after`) when `.sel`. `.fmt-desc` is clamped to
+  2 lines via `-webkit-line-clamp`.
+
+--------------------------------------------------------------------------------
+A.7 ADDING / MOVING TEMPLATES — WHAT TO TOUCH
+--------------------------------------------------------------------------------
+- New template:
+    1. Register it from the right sibling
+       (`js/newsletter/bank_page.js` for bank pages, `core_templates.js`
+       otherwise) via `App.NewsletterBuilder.registerTemplate(id, fn)`.
+    2. Add its catalog entry in `TEMPLATE_CATALOG`
+       (js/newsletter_builder.js:132+). `recommended` becomes the card desc.
+    3. Optionally add a thumbnail to `App.Graphics.FORMAT_THUMBS[id]`.
+       Without one the card falls back to the `poster` thumb.
+    4. Add the per-template folder under `templates/<id>/` with
+       `design/` and `ensemble-logs/` subfolders (see project CLAUDE.md).
+- Promote to Ready: add the id to `READY_TEMPLATE_IDS`
+  (js/newsletter_builder.js:160). No index.html edit required.
+- Change the default selection: edit the `sel: t.id === 'poster'` line in
+  the IIFE (index.html ~line 1169) — but keep the chosen default in the
+  Ready tier so it's visible without expanding Beta.
+
+--------------------------------------------------------------------------------
+A.8 GOTCHAS
+--------------------------------------------------------------------------------
+- The IIFE quotes the template name into an inline onclick via
+  `${f.name.replace(/'/g,'\\&#39;')}` — single quotes in template names are
+  escaped to `&#39;`. Other characters that could break an HTML attribute
+  (double quotes, `<`, `>`) are not escaped. Keep new template names plain.
+- Default visible tier is Ready only. Beta cards live inside a closed
+  `<details>` on first load — anything users need to see immediately must
+  be promoted to Ready or the section header text adjusted accordingly.
+- The "14 layouts…" copy in the section header (index.html:976) is static.
+  If the catalog count drifts noticeably, update the copy or replace the
+  literal with a JS-driven count.
+
