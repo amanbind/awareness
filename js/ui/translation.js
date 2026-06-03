@@ -248,7 +248,7 @@ Now translate the content inside <source> into ${targetLanguageName} following a
           method: 'POST',
           headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
           body: JSON.stringify({
-            model: 'gpt-4o-mini',
+            model: 'gpt-5-mini',
             temperature: 0.1,
             messages: [
               { role: 'system', content: 'You are a precise professional translator specializing in corporate security communications. Output only translated text — no preamble, no explanation, no apology.' },
@@ -264,7 +264,7 @@ Now translate the content inside <source> into ${targetLanguageName} following a
             method: 'POST',
             headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
             body: JSON.stringify({
-              model: 'gpt-4o-mini',
+              model: 'gpt-5-mini',
               temperature: 0.0,
               messages: [
                 { role: 'system', content: 'You are a precise professional translator. The previous response was rejected. Return translated text only — no commentary, no apology.' },
