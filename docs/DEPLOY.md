@@ -84,6 +84,55 @@ The image is a standard OCI artifact. Push it to your registry and deploy it how
 
 ---
 
+## Azure App Service with SSO
+
+Use this path only if Azure App Service is fronting the app with Caddy + `oauth2-proxy` and you want browser SSO to survive redirects and refreshes.
+
+### Set these Azure App Service settings
+
+In **App Service > Configuration > Application settings**, set the public host once and reuse it everywhere:
+
+```text
+CADDY_DOMAIN=awareness-angvc8d5gugseqgj.centralindia-01.azurewebsites.net
+OAUTH2_PROXY_REDIRECT_URL=https://awareness-angvc8d5gugseqgj.centralindia-01.azurewebsites.net/oauth2/callback
+OAUTH2_PROXY_COOKIE_DOMAIN=awareness-angvc8d5gugseqgj.centralindia-01.azurewebsites.net
+```
+
+Rules:
+
+1. `CADDY_DOMAIN` is the canonical public host. Use your custom domain here if you have one; otherwise use the default `*.azurewebsites.net` hostname exactly.
+2. `OAUTH2_PROXY_REDIRECT_URL` must be `https://` and must end in `/oauth2/callback`.
+3. `OAUTH2_PROXY_COOKIE_DOMAIN` must match `CADDY_DOMAIN` byte-for-byte. If these differ, the login will appear to work once and then fail on refresh because the session cookie never sticks to the right host.
+4. If you change the public host later, update all three values together and update the Azure AD app registration callback URL to the same `https://<host>/oauth2/callback` value.
+
+### Azure runtime settings
+
+Also set these App Service settings for the SSO container:
+
+```text
+WEBSITES_PORT=80
+OAUTH2_PROXY_COOKIE_SECURE=true
+OAUTH2_PROXY_REVERSE_PROXY=true
+OAUTH2_PROXY_SET_XAUTHREQUEST=true
+```
+
+These match the hardened `deploy/docker-compose.yml` and are required when Caddy sits behind Azure’s front end.
+
+### Azure deployment order
+
+1. Deploy the container or compose setup.
+2. Verify the App Service hostname is the one you used in the three settings above.
+3. Update the Azure AD app registration redirect URI to:
+
+```text
+https://awareness-angvc8d5gugseqgj.centralindia-01.azurewebsites.net/oauth2/callback
+```
+
+4. Turn on HTTPS-only in App Service.
+5. Hit `/oauth2/sign_in` once, complete the Entra ID login, then refresh the page to confirm the browser session persists.
+
+---
+
 ## 3. Path B — Caddy (auto-HTTPS, smallest config)
 
 Caddy auto-provisions TLS via ACME on first start. ~25 lines of config; that's the whole thing.

@@ -4,5 +4,7 @@
     "**/.git/objects/**": true,
     "**/.git/subtree-cache/**": true,
     "**/node_modules/*/**": true
-  }
+  },
+  "appService.defaultWebAppToDeploy": "/subscriptions/d70f2cef-1d04-4875-b24f-8fa16dddcbab/resourceGroups/awareness_group/providers/Microsoft.Web/sites/awareness",
+  "appService.deploySubpath": "."
 }
